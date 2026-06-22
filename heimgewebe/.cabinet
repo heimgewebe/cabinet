@@ -1,0 +1,10 @@
+schemaVersion: 1
+id: "heimgewebe-room"
+name: "Heimgewebe"
+kind: room
+version: "0.1.0"
+description: "Multi-Repo-Architektur, Contracts, Artefaktflüsse und Fleet-Kohärenz."
+entry: index.md
+room:
+  icon: sparkles
+  color: "rgb(168, 85, 247)"

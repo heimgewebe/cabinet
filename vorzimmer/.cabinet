@@ -1,0 +1,10 @@
+schemaVersion: 1
+id: "vorzimmer-room"
+name: "Vorzimmer"
+kind: room
+version: "0.1.0"
+description: "Aufnahme, Klärung und Verteilung projektübergreifender Arbeit."
+entry: index.md
+room:
+  icon: sparkles
+  color: "rgb(99, 102, 241)"

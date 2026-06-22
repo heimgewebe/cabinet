@@ -1,5 +1,12 @@
-# Cabinet
+# Cabinet Home
 
-Saubere Ausgangsbasis für die neue Cabinet-Struktur.
+Home ist der neutrale Eingang in die Arbeitsräume.
 
-Die Rooms, Agenten, Aufgaben und Automatisierungen werden kontrolliert und schrittweise eingerichtet.
+## Rooms
+
+- **Vorzimmer** – Aufnahme, Klärung und Verteilung
+- **Heim-PC** – lokale Infrastruktur und Runbooks
+- **Heimgewebe** – Multi-Repo-Architektur und Contracts
+- **Weltgewebe** – Produkt, Anwendung und Betrieb
+
+Projektarbeit findet in den Rooms statt, nicht im Home-Container.
