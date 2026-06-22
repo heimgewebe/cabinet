@@ -1,0 +1,9 @@
+schemaVersion: 1
+id: home
+name: alex's Home
+kind: home
+version: 0.1.0
+description: Cabinet home (room container).
+entry: index.md
+room:
+  icon: home
