@@ -11,8 +11,15 @@ else
   DESTINATION="$HOME/exports/cabinet-safe/cabinet-$STAMP"
 fi
 
+RUNTIME_ENV="${CABINET_RUNTIME_ENV:-$HOME/.config/cabinet/runtime.env}"
+
 command -v rsync >/dev/null 2>&1 || {
   echo "STOP: rsync fehlt." >&2
+  exit 2
+}
+
+command -v python3 >/dev/null 2>&1 || {
+  echo "STOP: python3 fehlt." >&2
   exit 2
 }
 
@@ -61,8 +68,8 @@ rsync -a \
 cat >"$DESTINATION/SAFE_EXPORT_MANIFEST.txt" <<EOF
 Cabinet Safe Export
 
-Created: $(date --iso-8601=seconds)
-Source:  $SOURCE
+Created:  $(date --iso-8601=seconds)
+Source:   $SOURCE
 Git HEAD: $(git -C "$SOURCE" rev-parse HEAD 2>/dev/null || echo unavailable)
 
 Excluded:
@@ -70,10 +77,10 @@ Excluded:
 - SQLite runtime indexes
 - .cabinet-state
 - global agents and their runtime
-- agent config, runtime and conversations
+- agent configuration, runtime and conversations
 - jobs
-- environment and key files
-- logs and pid files
+- environment files and key files
+- logs and PID files
 EOF
 
 for forbidden in \
@@ -118,20 +125,118 @@ then
   exit 6
 fi
 
-if grep -RIlE \
-     'KB_PASSWORD|GEMINI_API_KEY|BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY' \
-     "$DESTINATION" \
-     >/tmp/cabinet-safe-export-secret-hits.$$ \
-     2>/dev/null
-then
-  cat /tmp/cabinet-safe-export-secret-hits.$$ >&2
-  rm -f /tmp/cabinet-safe-export-secret-hits.$$
+python3 - "$DESTINATION" "$RUNTIME_ENV" <<'PY'
+from pathlib import Path
+import re
+import sys
 
-  echo "STOP: Mögliches Secret im Export." >&2
-  exit 7
-fi
+root = Path(sys.argv[1])
+runtime_env = Path(sys.argv[2])
 
-rm -f /tmp/cabinet-safe-export-secret-hits.$$
+secret_name = re.compile(
+    r"(PASSWORD|TOKEN|SECRET|API_KEY|PRIVATE_KEY|CLIENT_SECRET)",
+    re.IGNORECASE,
+)
+
+env_key = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+secret_values: list[bytes] = []
+
+if runtime_env.is_file():
+    for raw_line in runtime_env.read_text(
+        encoding="utf-8",
+        errors="replace",
+    ).splitlines():
+        line = raw_line.strip()
+
+        if not line or line.startswith("#"):
+            continue
+
+        if line.startswith("export "):
+            line = line[7:].lstrip()
+
+        if "=" not in line:
+            continue
+
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+
+        if not env_key.fullmatch(key):
+            continue
+
+        if not secret_name.search(key):
+            continue
+
+        if (
+            len(value) >= 2
+            and value[0] == value[-1]
+            and value[0] in {"'", '"'}
+        ):
+            value = value[1:-1]
+
+        encoded = value.encode("utf-8")
+
+        if len(encoded) >= 8:
+            secret_values.append(encoded)
+
+private_key_prefix = b"-----BEGIN "
+private_key_names = (
+    b"PRIVATE KEY",
+    b"RSA PRIVATE KEY",
+    b"OPENSSH PRIVATE KEY",
+    b"EC PRIVATE KEY",
+)
+
+private_key_markers = [
+    private_key_prefix + name + b"-----"
+    for name in private_key_names
+]
+
+secret_hits: set[str] = set()
+private_key_hits: set[str] = set()
+
+for path in root.rglob("*"):
+    if not path.is_file():
+        continue
+
+    try:
+        content = path.read_bytes()
+    except OSError:
+        continue
+
+    relative = str(path.relative_to(root))
+
+    if any(value in content for value in secret_values):
+        secret_hits.add(relative)
+
+    if any(marker in content for marker in private_key_markers):
+        private_key_hits.add(relative)
+
+if secret_hits or private_key_hits:
+    if secret_hits:
+        print(
+            "STOP: Konkreter Wert aus der Runtime-Konfiguration "
+            "wurde im Export gefunden.",
+            file=sys.stderr,
+        )
+
+        for hit in sorted(secret_hits):
+            print(f"- {hit}", file=sys.stderr)
+
+    if private_key_hits:
+        print(
+            "STOP: Private-Key-Marker wurde im Export gefunden.",
+            file=sys.stderr,
+        )
+
+        for hit in sorted(private_key_hits):
+            print(f"- {hit}", file=sys.stderr)
+
+    raise SystemExit(7)
+
+print("Secret-Inhaltsprüfung: PASS")
+PY
 
 chmod -R go-rwx "$DESTINATION"
 
