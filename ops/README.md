@@ -86,29 +86,63 @@ einem vollständigen Tree- und History-Scan zulässig.
 
 ## CI und Validierung
 
-Dieses Repository trennt strikt zwischen dem versionierten Repository-Vertrag und dem lokalen Laufzeitzustand. Die CI prüft ausschließlich den sauberen Repository-Zustand.
+Dieses Repository trennt strikt zwischen dem versionierten Repository-Vertrag
+und dem lokalen Laufzeitzustand. Die CI prüft ausschließlich den sauberen
+Repository-Zustand und niemals den lokalen Betriebszustand.
 
-- **Pfadguard:** Erkennt verbotene versionierte Dateipfade im Repository-Vertrag.
-- **Gitleaks:** Die CI prüft den aktuellen Git-Baum und die Git-Historie mit Gitleaks auf bekannte Secretmuster. Ein erfolgreicher Scan beweist keine vollständige Secret-Abwesenheit.
-- **Installer-Shadow-Test:** Beweist die isolierte Dateisysteminstallation in einem temporären Verzeichnis und deren Idempotenz.
-- **audit-local-runtime.sh:** Prüft die echte lokale Runtime und den echten systemd-Dienst. Dies wird bewusst nicht in der CI ausgeführt.
+### Repositoryvertrag (`repository-contract`)
 
-**Sicherheitsgrenze:** GitHub CI beweist keinen laufenden Cabinet-Dienst. Sie garantiert lediglich die strukturelle und syntaktische Unversehrtheit des Repositories sowie das Nichtvorhandensein bekannter Dateinamen und Secretmuster.
+- Prüft den vollständig materialisierten Git-Baum von HEAD.
+- Erkennt verbotene versionierte Pfade (Datenbanken, Laufzeitzustand,
+  Secrets, Agentenlaufzeitverzeichnisse).
+- Verifiziert das Manifest exakt: Quellenmengen, Feldmengen, Git-Dateimodi
+  und Duplikatfreiheit.
+- Prüft Syntax aller Python- und Bash-Skripte im Snapshot.
+- Der globale `TARGET-PROOF: CABINET REPOSITORY CONTRACT VALID` erscheint
+  ausschließlich nach allen Teilprüfungen.
 
-Lokale Validierung:
+### Installer-Shadow-Test (`installer-shadow`)
+
+- Führt den Installer aus einem temporären `git archive`-Snapshot aus,
+  nicht aus dem echten Checkout.
+- Installiert in ein temporäres Home-Verzeichnis mit `systemctl`-Stub.
+- Prüft Binaries, Units, Symlink, `runtime.env`-Hash und systemctl-Aufrufe
+  nach Lauf 1 und Lauf 2.
+- Beweist, dass das echte Repository-Verzeichnis vor und nach dem Test
+  bytegleich bleibt (`TARGET-PROOF: SOURCE REPOSITORY WAS NOT MODIFIED`).
+- Prüft fünf negative Zustandsmutationen gegen den Installationschecker
+  (`check-installed-runtime.py`).
+
+### Secret-Scan (`secret-scan`)
+
+- Scannt den Git-Commit-Baum (`dir`-Modus) und die vollständige
+  Commit-Geschichte (`git`-Modus) mit dem festgepinnten Gitleaks-Image.
+- Ergebnis wird durch `check-gitleaks-result.py` ausgewertet: Returncode,
+  Berichtsexistenz, JSON-Gültigkeit, Array-Typ und Findingzahl.
+- `--ignore-gitleaks-allow` ist gesetzt: gitleaks:allow-Kommentare werden
+  nicht als Ausnahme akzeptiert.
+- Ein erfolgreicher Scan belegt, dass keine bekannten Secretmuster im
+  aktuellen Baum oder der Geschichte enthalten sind. Er beweist keine
+  vollständige Secret-Abwesenheit.
+
+### Grenzen der CI-Aussagekraft
+
+Die CI erzwingt die definierten Repositoryverträge und prüft bekannte
+Secretmuster. Sie beweist weder die reale Laufzeitfunktion noch vollständige
+Secret-Abwesenheit.
+
+`audit-local-runtime.sh` bleibt der Beweis für die echte lokale Runtime
+und den echten systemd-Dienst. Dieser Schritt wird bewusst nicht in der
+CI ausgeführt.
+
+### Lokale Validierung
+
 ```bash
 cd ~/repos/cabinet
 ./scripts/ci/validate-repository.sh
-```
-
-Lokale negative Validator-Tests:
-```bash
 ./scripts/ci/test-validate-repository.sh
-```
-
-Lokaler isolierter Installer-Shadow-Test:
-```bash
 ./scripts/ci/test-install-local-runtime.sh
+./scripts/ci/test-gitleaks-contract.sh
 ```
 
 GitHub Actions Jobs (siehe `.github/workflows/validate.yml`):
