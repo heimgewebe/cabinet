@@ -1,7 +1,3 @@
-# Betrieb
+# Betrieb - Migration
 
-Hosts, Dienste, Runtime, Changes, Incidents und Runbooks.
-
-## Einstieg
-
-Öffne zuerst **Start Here**.
+Bestehende Betriebsdokumentation bleibt lesbar. Neue pruefbare Runtime-Beobachtungen und Risiken werden kuenftig in Pruefung gefuehrt.
