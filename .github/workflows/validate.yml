@@ -1,0 +1,102 @@
+name: Validate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+
+jobs:
+  repository-contract:
+    name: Repository Contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Validate Repository Contract
+        run: ./scripts/ci/validate-repository.sh
+
+      - name: Test Validator
+        run: ./scripts/ci/test-validate-repository.sh
+
+  installer-shadow:
+    name: Installer Shadow Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Test Local Runtime Install
+        run: ./scripts/ci/test-install-local-runtime.sh
+
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Ensure no custom ignore files
+        run: |
+          if [[ -f .gitleaks.toml ]] || [[ -f .gitleaksignore ]]; then
+            echo "FAIL: Custom gitleaks configuration found, which might hide secrets."
+            exit 1
+          fi
+
+      - name: Setup Output Directory
+        run: mkdir -p "${RUNNER_TEMP}/cabinet-gitleaks"
+
+      - name: Gitleaks Contract Tests
+        run: ./scripts/ci/test-gitleaks-contract.sh
+
+      - name: Gitleaks History Scan
+        run: |
+          ./scripts/ci/run-gitleaks.sh \
+            --mode git \
+            --source "$GITHUB_WORKSPACE" \
+            --report "${RUNNER_TEMP}/cabinet-gitleaks/history.json" \
+            --label history
+
+      - name: Gitleaks Tree Scan
+        run: |
+          ./scripts/ci/run-gitleaks.sh \
+            --mode dir \
+            --source "$GITHUB_WORKSPACE" \
+            --report "${RUNNER_TEMP}/cabinet-gitleaks/tree.json" \
+            --label tree

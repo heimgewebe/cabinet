@@ -6,6 +6,7 @@ from pathlib import Path
 import json
 import re
 import sys
+import argparse
 
 
 def parse_scalar(value: str):
@@ -81,11 +82,13 @@ def parse_frontmatter(path: Path) -> dict:
 
 
 def main() -> int:
-    root = (
-        Path(sys.argv[1]).expanduser().resolve()
-        if len(sys.argv) > 1
-        else (Path.home() / "repos" / "cabinet").resolve()
-    )
+    parser = argparse.ArgumentParser()
+    parser.add_argument("root", nargs="?", default=str(Path.home() / "repos" / "cabinet"))
+    parser.add_argument("--mode", choices=["local", "repository"], default="local")
+    args = parser.parse_args()
+
+    root = Path(args.root).expanduser().resolve()
+    mode = args.mode
 
     policy_path = root / "policy/cabinet-layout.json"
 
@@ -105,42 +108,65 @@ def main() -> int:
     home_path = root / ".home/home.json"
     workspace_path = root / ".agents/.config/workspace.json"
 
-    if not home_path.is_file():
-        errors.append("Home-Konfiguration fehlt.")
+    if mode == "local":
+        if not home_path.is_file():
+            errors.append("Home-Konfiguration fehlt.")
+        else:
+            home = json.loads(
+                home_path.read_text(encoding="utf-8")
+            )
+
+            expected_default = policy["defaultRoom"]
+
+            if home.get("defaultRoom") != expected_default:
+                errors.append(
+                    "defaultRoom="
+                    f"{home.get('defaultRoom')!r}, "
+                    f"erwartet {expected_default!r}"
+                )
+
+            if home.get("lastActiveRoom") != expected_default:
+                errors.append(
+                    "lastActiveRoom="
+                    f"{home.get('lastActiveRoom')!r}, "
+                    f"erwartet {expected_default!r}"
+                )
+
+        if not workspace_path.is_file():
+            errors.append("Workspace-Konfiguration fehlt.")
+        else:
+            workspace = json.loads(
+                workspace_path.read_text(encoding="utf-8")
+            )
+
+            room = workspace.get("room", {})
+
+            if room.get("slug") != policy["defaultRoom"]:
+                errors.append(
+                    "Workspace zeigt nicht auf den Default-Room."
+                )
     else:
-        home = json.loads(
-            home_path.read_text(encoding="utf-8")
-        )
-
-        expected_default = policy["defaultRoom"]
-
-        if home.get("defaultRoom") != expected_default:
-            errors.append(
-                "defaultRoom="
-                f"{home.get('defaultRoom')!r}, "
-                f"erwartet {expected_default!r}"
+        # repository mode explicitly checks for .home/home.json presence as required,
+        # but does NOT check workspace_path (which is local).
+        if not home_path.is_file():
+            errors.append("Home-Konfiguration fehlt.")
+        else:
+            home = json.loads(
+                home_path.read_text(encoding="utf-8")
             )
-
-        if home.get("lastActiveRoom") != expected_default:
-            errors.append(
-                "lastActiveRoom="
-                f"{home.get('lastActiveRoom')!r}, "
-                f"erwartet {expected_default!r}"
-            )
-
-    if not workspace_path.is_file():
-        errors.append("Workspace-Konfiguration fehlt.")
-    else:
-        workspace = json.loads(
-            workspace_path.read_text(encoding="utf-8")
-        )
-
-        room = workspace.get("room", {})
-
-        if room.get("slug") != policy["defaultRoom"]:
-            errors.append(
-                "Workspace zeigt nicht auf den Default-Room."
-            )
+            expected_default = policy["defaultRoom"]
+            if home.get("defaultRoom") != expected_default:
+                errors.append(
+                    "defaultRoom="
+                    f"{home.get('defaultRoom')!r}, "
+                    f"erwartet {expected_default!r}"
+                )
+            if home.get("lastActiveRoom") != expected_default:
+                errors.append(
+                    "lastActiveRoom="
+                    f"{home.get('lastActiveRoom')!r}, "
+                    f"erwartet {expected_default!r}"
+                )
 
     expected_rooms = policy["rooms"]
     found_rooms: dict[str, dict] = {}
@@ -198,20 +224,21 @@ def main() -> int:
                 f"Verbotener Top-Level-Room: {forbidden}"
             )
 
-    editor_path = root / ".global-agents/editor/persona.md"
+    if mode == "local":
+        editor_path = root / ".global-agents/editor/persona.md"
 
-    if not editor_path.is_file():
-        errors.append("Globaler Editor fehlt.")
-    else:
-        editor = parse_frontmatter(editor_path)
-        expected_editor = policy["systemAgents"]["editor"]
+        if not editor_path.is_file():
+            errors.append("Globaler Editor fehlt.")
+        else:
+            editor = parse_frontmatter(editor_path)
+            expected_editor = policy["systemAgents"]["editor"]
 
-        for key, expected_value in expected_editor.items():
-            if editor.get(key) != expected_value:
-                errors.append(
-                    f"editor.{key}={editor.get(key)!r}, "
-                    f"erwartet={expected_value!r}"
-                )
+            for key, expected_value in expected_editor.items():
+                if editor.get(key) != expected_value:
+                    errors.append(
+                        f"editor.{key}={editor.get(key)!r}, "
+                        f"erwartet={expected_value!r}"
+                    )
 
     for slug in expected_rooms:
         room = root / slug
@@ -245,16 +272,17 @@ def main() -> int:
                 if relative.name == ".gitkeep":
                     continue
 
-                if any(
-                    part in {
-                        ".conversations",
-                        ".runtime",
-                        ".memory",
-                        ".messages",
-                    }
-                    for part in relative.parts
-                ):
-                    continue
+                if mode == "local":
+                    if any(
+                        part in {
+                            ".conversations",
+                            ".runtime",
+                            ".memory",
+                            ".messages",
+                        }
+                        for part in relative.parts
+                    ):
+                        continue
 
                 errors.append(
                     f"{slug}: unerwartete Agentendatei: "
@@ -300,6 +328,7 @@ def main() -> int:
 
     if errors:
         print("CABINET-LAYOUT-GUARD: FAIL")
+        print(f"Mode: {mode}")
 
         for error in errors:
             print(f"- {error}")
@@ -307,6 +336,7 @@ def main() -> int:
         return 2
 
     print("CABINET-LAYOUT-GUARD: PASS")
+    print(f"Mode: {mode}")
     print(
         "Rooms:",
         ", ".join(sorted(expected_rooms)),
@@ -315,12 +345,13 @@ def main() -> int:
         "Default:",
         policy["defaultRoom"],
     )
-    print(
-        "Editor:",
-        "active=true",
-        "heartbeatEnabled=false",
-        "canDispatch=false",
-    )
+    if mode == "local":
+        print(
+            "Editor:",
+            "active=true",
+            "heartbeatEnabled=false",
+            "canDispatch=false",
+        )
 
     return 0
 
