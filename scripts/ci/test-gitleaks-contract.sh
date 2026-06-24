@@ -20,10 +20,10 @@ expect_gitleaks_pass() {
     echo "=== $desc ==="
     if python3 "$CHECKER" --label "$label" --return-code "$rc" --report "$report"; then
         echo "PASS"
-        ((pass_count++))
+        pass_count=$((pass_count + 1))
     else
         echo "FAIL: expected PASS"
-        ((fail_count++))
+        fail_count=$((fail_count + 1))
     fi
 }
 
@@ -38,15 +38,15 @@ expect_gitleaks_fail() {
     if out=$(python3 "$CHECKER" --label "$label" --return-code "$rc" --report "$report" 2>&1); then
         echo "FAIL: expected failure but got success"
         echo "Output: $out"
-        ((fail_count++))
+        fail_count=$((fail_count + 1))
     elif echo "$out" | grep -qF "$expected_msg"; then
         echo "PASS (correctly failed with: $expected_msg)"
-        ((pass_count++))
+        pass_count=$((pass_count + 1))
     else
         echo "FAIL: expected error message not found"
         echo "Expected: $expected_msg"
         echo "Got: $out"
-        ((fail_count++))
+        fail_count=$((fail_count + 1))
     fi
 }
 
