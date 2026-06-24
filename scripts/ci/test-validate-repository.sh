@@ -76,11 +76,15 @@ fi
 echo "PASS"
 
 echo "=== Test 4: Echter lokaler Modus besteht auf /home/alex/repos/cabinet ==="
-if ! python3 "$REAL_REPO/scripts/check-cabinet-layout.py" --mode local "$REAL_REPO" >/dev/null; then
-    echo "FAIL: local mode failed on real repo."
-    exit 1
+if [[ -f "$REAL_REPO/.home/home.json" ]]; then
+    if ! python3 "$REAL_REPO/scripts/check-cabinet-layout.py" --mode local "$REAL_REPO" >/dev/null; then
+        echo "FAIL: local mode failed on real repo."
+        exit 1
+    fi
+    echo "PASS"
+else
+    echo "SKIP (not in local dev environment)"
 fi
-echo "PASS"
 
 # Verbotene Pfade
 reset_state

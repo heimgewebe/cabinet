@@ -89,7 +89,7 @@ jobs:
             --network none \
             --user "$(id -u):$(id -g)" \
             ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
-            git --source /code --redact=100 --ignore-gitleaks-allow --max-decode-depth=2 --max-archive-depth=2 --report-format=json --report-path /out/history.json -v
+            git /code --redact=100 --ignore-gitleaks-allow --max-decode-depth=2 --max-archive-depth=2 --report-format=json --report-path /out/history.json -v
 
           findings="$(jq 'length' ${RUNNER_TEMP}/cabinet-gitleaks/history.json)"
           if [[ "$findings" != "0" ]]; then
@@ -106,7 +106,7 @@ jobs:
             --network none \
             --user "$(id -u):$(id -g)" \
             ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
-            dir --source /code --redact=100 --ignore-gitleaks-allow --max-decode-depth=2 --max-archive-depth=2 --report-format=json --report-path /out/tree.json -v
+            dir /code --redact=100 --ignore-gitleaks-allow --max-decode-depth=2 --max-archive-depth=2 --report-format=json --report-path /out/tree.json -v
 
           findings="$(jq 'length' ${RUNNER_TEMP}/cabinet-gitleaks/tree.json)"
           if [[ "$findings" != "0" ]]; then
