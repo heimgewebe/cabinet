@@ -25,6 +25,10 @@ touch "$SYSTEMCTL_LOG"
 
 # Materialisiere aktuellen HEAD-Stand in isoliertes Verzeichnis
 git -C "$REAL_REPO" archive --format=tar HEAD | tar -xf - -C "$TEMP_REPO"
+# Der Installer prüft [[ -d "$REPO_ROOT/.git" ]]; wir geben ihm ein frisches Init
+git -C "$TEMP_REPO" init -q
+git -C "$TEMP_REPO" config user.name "Cabinet CI Test"
+git -C "$TEMP_REPO" config user.email "cabinet-ci-test@example.invalid"
 
 # systemctl-Stub
 cat > "$STUB_BIN/systemctl" <<EOF
