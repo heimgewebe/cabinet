@@ -83,3 +83,30 @@ geprüft werden.
 
 Das Repository enthält keine Secrets. Ein Remote-Push ist nur nach
 einem vollständigen Tree- und History-Scan zulässig.
+
+## CI und Validierung
+
+Dieses Repository trennt strikt zwischen dem versionierten Repository-Vertrag und dem lokalen Laufzeitzustand. Die CI prüft ausschließlich den sauberen Repository-Zustand.
+
+Lokale Validierung:
+```bash
+cd ~/repos/cabinet
+./scripts/ci/validate-repository.sh
+```
+
+Lokale negative Validator-Tests:
+```bash
+./scripts/ci/test-validate-repository.sh
+```
+
+Lokaler isolierter Installer-Shadow-Test:
+```bash
+./scripts/ci/test-install-local-runtime.sh
+```
+
+GitHub Actions Jobs (siehe `.github/workflows/validate.yml`):
+- `repository-contract`
+- `installer-shadow`
+- `secret-scan`
+
+**Hinweis:** `ops/install/audit-local-runtime.sh` ist bewusst kein GitHub-CI-Test, da dieses Skript die reale installierte App und den echten systemd-Userdienst prüft. GitHub CI beweist nicht die reale Laufzeitfunktion, sondern garantiert lediglich die strukturelle und syntaktische Unversehrtheit des Repositories sowie das Fehlen von Secrets.
