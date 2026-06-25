@@ -55,6 +55,10 @@ for f in ops/bin/* ops/install/*.sh scripts/cabinet-safe-export.sh scripts/ci/*.
 done
 echo "Bash: PASS"
 
+
+echo "=== Repository Index Generator ==="
+python3 scripts/build-repository-index.py --check
+
 echo "=== Layout ==="
 python3 scripts/check-cabinet-layout.py --mode repository "$SNAPSHOT_ROOT"
 

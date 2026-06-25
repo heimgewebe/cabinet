@@ -79,14 +79,21 @@ Bestehende Inhalte werden einzeln als `keep`, `move`, `split`, `archive` oder `d
 ## Phasen
 
 1. Drei Zielräume parallel anlegen; alte Räume bleiben lesbar.
-2. Lokale Workspace-Konfiguration sichern und kontrolliert auf `steuerung` umstellen.
-3. Bestehende Repository References als Ausgangspunkt für Repositorykarten nutzen.
-4. Deterministischen Sammler für freigegebene Repositories bauen.
-5. Evidence-Pflicht, stabile Fingerprints und Hinweis/Bestätigt-Trennung einführen.
-6. Lage und Aufträge aus validierten Artefakten erzeugen.
-7. Alte Räume erst nach belegter Inhaltsmigration entfernen.
-8. Automatisierung erst nach wiederholbaren manuellen Läufen aktivieren.
+2. Repositorybestand deterministisch aufbauen (aus bestehenden Repository References).
+3. Bestand lokal prüfen.
+4. Erste Lageansicht ableiten.
+5. Erst danach lokaler Default-Cutover auf `steuerung`.
+6. Deterministischen Sammler für freigegebene Repositories bauen.
+7. Evidence-Pflicht, stabile Fingerprints und Hinweis/Bestätigt-Trennung einführen.
+8. Lage und Aufträge aus validierten Artefakten erzeugen.
+9. Alte Räume erst nach belegter Inhaltsmigration entfernen.
+10. Automatisierung erst nach wiederholbaren manuellen Läufen aktivieren.
 
 ## Neubewertung
 
 Die Dreiraumstruktur wird neu bewertet, wenn getrennte Benutzer, Vertraulichkeitsstufen, technisch erzwungene Agenten-Sandboxes oder stark abweichende Providerregeln entstehen.
+
+## Authority-Grenze
+
+- **Repository Reference**: versionierte Detail- und Evidenzquelle
+- **Repository-Index**: generierte Übersicht
