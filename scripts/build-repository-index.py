@@ -27,7 +27,6 @@ OPTIONAL_ROLE_HEADING = "Kanonische Systemrolle"
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 WORKTREE_RE = re.compile(r"^(?:clean|dirty):[0-9]+$")
 VISIBLE_HASH_LENGTH = 12
-VISIBLE_ROLE_LENGTH = 50
 
 
 class InventoryError(RuntimeError):
@@ -158,6 +157,8 @@ def _parse_role(lines: list[str]) -> str | None:
         line = raw_line.strip()
         if line.startswith(">"):
             value = _strip_wrapper(line[1:].strip())
+            if value.startswith("- "):
+                value = value[2:].strip()
             if value:
                 quote_lines.append(value)
         elif quote_lines:
@@ -309,16 +310,8 @@ def _short_hash(value: str) -> str:
     return value[:VISIBLE_HASH_LENGTH]
 
 
-def _compact_role(value: str | None) -> str:
-    if not value:
-        return "—"
-    if len(value) <= VISIBLE_ROLE_LENGTH:
-        return _escape_cell(value)
-    return _escape_cell(value[: VISIBLE_ROLE_LENGTH - 3] + "...")
-
-
-def _compact_timestamp(value: str) -> str:
-    return value[:10]
+def _role(value: str | None) -> str:
+    return "—" if not value else _escape_cell(value)
 
 
 def _reference_link(source_path: str, output_path: Path) -> str:
@@ -336,8 +329,8 @@ def render_index(records: list[RepositoryRecord], output_path: Path) -> str:
         "> Source: tracked `Repository Reference.md` files.",
         "> `Repository Reference.md` is the versioned detail and evidence source; this index is only a generated overview.",
         "",
-        "| Repository | Rolle | Review | Live | Beziehung | Status | Importiert | Referenz |",
-        "|---|---|---|---|---|---|---|---|",
+        "| Repository | Rolle | Review | Live | Beziehung | Status | Referenz |",
+        "|---|---|---|---|---|---|---|",
     ]
     for record in records:
         lines.append(
@@ -345,12 +338,11 @@ def render_index(records: list[RepositoryRecord], output_path: Path) -> str:
             + " | ".join(
                 (
                     _code(record.repository),
-                    _compact_role(record.role),
+                    _role(record.role),
                     _code(_short_hash(record.review_head)),
                     _code(_short_hash(record.live_head)),
                     _escape_cell(record.relationship),
                     _code(record.working_tree),
-                    _code(_compact_timestamp(record.imported_at)),
                     _reference_link(record.source_path, output_path),
                 )
             )
