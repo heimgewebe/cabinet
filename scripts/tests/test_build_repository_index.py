@@ -224,6 +224,96 @@ class RepositoryInventoryCliTests(unittest.TestCase):
             "malformed table separator",
         )
 
+    def test_symlinked_reference_is_rejected_by_git_mode(self) -> None:
+        target = self.root / "room/target.md"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(reference_text("alpha"), encoding="utf-8")
+        link = self.root / "room/Repository Reference.md"
+        link.symlink_to(target.name)
+        subprocess.run(
+            ["git", "-C", str(self.root), "add", "--", "room/Repository Reference.md"],
+            check=True,
+        )
+        result = self.run_cli("--check")
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn("git mode 100644", result.stderr)
+        self.assertIn("found mode 120000", result.stderr)
+
+    def test_output_path_must_remain_inside_repository(self) -> None:
+        self.write_reference("room/Repository Reference.md", reference_text("alpha"))
+        outside = self.root.parent / f"{self.root.name}-outside-index.md"
+        outside.unlink(missing_ok=True)
+        try:
+            result = self.run_cli("--output", str(outside))
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertIn("output path escapes repository", result.stderr)
+            self.assertFalse(outside.exists())
+        finally:
+            outside.unlink(missing_ok=True)
+
+    def test_repository_validator_rejects_stale_inventory(self) -> None:
+        source_repo = SCRIPT_PATH.parents[1]
+        validator = source_repo / "scripts/ci/validate-repository.sh"
+        if not validator.is_file() or not (source_repo / ".git").exists():
+            self.skipTest("full repository checkout required")
+
+        clone = self.root / "integration-repo"
+        head = subprocess.check_output(
+            ["git", "-C", str(source_repo), "rev-parse", "HEAD"], text=True
+        ).strip()
+        subprocess.run(
+            ["git", "clone", "--no-hardlinks", "--quiet", str(source_repo), str(clone)],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(clone), "checkout", "--quiet", "--detach", head],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(clone), "config", "user.name", "Cabinet Inventory Test"],
+            check=True,
+        )
+        subprocess.run(
+            [
+                "git", "-C", str(clone), "config", "user.email",
+                "cabinet-inventory-test@example.invalid",
+            ],
+            check=True,
+        )
+
+        raw = subprocess.check_output(
+            [
+                "git", "-C", str(clone), "ls-files", "-z", "--",
+                ":(glob)**/Repository Reference.md",
+            ]
+        )
+        references = [item.decode("utf-8") for item in raw.split(b"\0") if item]
+        self.assertTrue(references)
+        reference = clone / references[0]
+        text = reference.read_text(encoding="utf-8")
+        old = "2026-06-23T18:38:45.731368+00:00"
+        new = "2026-06-24T18:38:45.731368+00:00"
+        self.assertEqual(text.count(old), 2)
+        reference.write_text(text.replace(old, new), encoding="utf-8")
+        subprocess.run(
+            ["git", "-C", str(clone), "add", "--", references[0]], check=True
+        )
+        subprocess.run(
+            ["git", "-C", str(clone), "commit", "-qm", "make inventory stale"],
+            check=True,
+        )
+
+        result = subprocess.run(
+            [str(clone / "scripts/ci/validate-repository.sh")],
+            cwd=clone,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+        )
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn("repository inventory is stale", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

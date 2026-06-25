@@ -65,8 +65,27 @@ def _run_git(repo_root: Path, *args: str) -> bytes:
 
 
 def tracked_reference_paths(repo_root: Path) -> list[str]:
-    raw = _run_git(repo_root, "ls-files", "-z", "--", REFERENCE_PATHSPEC)
-    paths = [item.decode("utf-8") for item in raw.split(b"\0") if item]
+    raw = _run_git(repo_root, "ls-files", "-s", "-z", "--", REFERENCE_PATHSPEC)
+    paths: list[str] = []
+    for entry in raw.split(b"\0"):
+        if not entry:
+            continue
+        try:
+            metadata, encoded_path = entry.split(b"\t", 1)
+            mode, _object_id, stage = metadata.split(b" ", 2)
+            source_path = encoded_path.decode("utf-8")
+            mode_text = mode.decode("ascii")
+            stage_text = stage.decode("ascii")
+        except (UnicodeDecodeError, ValueError) as exc:
+            raise InventoryError(
+                "malformed git index entry for repository reference"
+            ) from exc
+        if mode_text != "100644" or stage_text != "0":
+            raise InventoryError(
+                f"{source_path}: tracked reference must use git mode 100644 "
+                f"at stage 0; found mode {mode_text}, stage {stage_text}"
+            )
+        paths.append(source_path)
     return sorted(paths, key=lambda value: (value.casefold(), value))
 
 
@@ -356,7 +375,7 @@ def _role_excerpt(value: str | None) -> str:
     return _escape_cell(excerpt)
 
 
-def render_index(records: list[RepositoryRecord], output_path: Path) -> str:
+def render_index(records: list[RepositoryRecord]) -> str:
     lines = [
         "# Repositories",
         "",
@@ -455,7 +474,7 @@ def main(argv: list[str] | None = None) -> int:
                 f"output path escapes repository: {output_path}"
             ) from exc
         records, warnings = load_records(repo_root)
-        expected = render_index(records, relative_output)
+        expected = render_index(records)
         current = output_path.read_text(encoding="utf-8") if output_path.is_file() else ""
 
         for warning in warnings:
