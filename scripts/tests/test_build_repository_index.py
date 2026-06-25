@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import re
 import subprocess
 import tempfile
 import unittest
+from datetime import datetime, timedelta
 from pathlib import Path
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "build-repository-index.py"
@@ -291,10 +293,38 @@ class RepositoryInventoryCliTests(unittest.TestCase):
         self.assertTrue(references)
         reference = clone / references[0]
         text = reference.read_text(encoding="utf-8")
-        old = "2026-06-23T18:38:45.731368+00:00"
-        new = "2026-06-24T18:38:45.731368+00:00"
-        self.assertEqual(text.count(old), 2)
-        reference.write_text(text.replace(old, new), encoding="utf-8")
+        provenance_match = re.search(
+            r"(?m)^\| Import-Snapshot erfasst \| `([^`]+)` \|$",
+            text,
+        )
+        live_match = re.search(
+            r"(?m)^\| Erfasst \| `([^`]+)` \|$",
+            text,
+        )
+        self.assertIsNotNone(provenance_match)
+        self.assertIsNotNone(live_match)
+        assert provenance_match is not None
+        assert live_match is not None
+
+        old = provenance_match.group(1)
+        self.assertEqual(live_match.group(1), old)
+        new = (
+            datetime.fromisoformat(old.replace("Z", "+00:00"))
+            + timedelta(seconds=1)
+        ).isoformat()
+
+        updated = text.replace(
+            f"| Import-Snapshot erfasst | `{old}` |",
+            f"| Import-Snapshot erfasst | `{new}` |",
+            1,
+        )
+        updated = updated.replace(
+            f"| Erfasst | `{old}` |",
+            f"| Erfasst | `{new}` |",
+            1,
+        )
+        self.assertNotEqual(updated, text)
+        reference.write_text(updated, encoding="utf-8")
         subprocess.run(
             ["git", "-C", str(clone), "add", "--", references[0]], check=True
         )
