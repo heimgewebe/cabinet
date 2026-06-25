@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
-"""Build the deterministic Cabinet repository snapshot catalogue."""
+"""Build the deterministic Cabinet repository snapshot catalogue.
+
+The Git index discovers and authorizes tracked references. Local write mode
+reads current regular working-tree files; check mode rejects reference drift
+between the working tree and the indexed blob before rendering.
+"""
 
 from __future__ import annotations
 
 import argparse
 import difflib
+import errno
 import os
 import re
+import stat
 import subprocess
 import sys
 import tempfile
@@ -16,6 +23,7 @@ from pathlib import Path
 
 DEFAULT_OUTPUT = Path("bestand/10 Repositories/index.md")
 REFERENCE_PATHSPEC = ":(glob)**/Repository Reference.md"
+GENERATED_FILE_MODE = 0o644
 REQUIRED_HEADINGS = (
     "Provenienz",
     "Geprüfter Review-Snapshot",
@@ -32,6 +40,12 @@ VISIBLE_ROLE_WORDS = 5
 
 class InventoryError(RuntimeError):
     """Raised when a repository reference violates the extraction contract."""
+
+
+@dataclass(frozen=True)
+class TrackedReference:
+    source_path: str
+    object_id: str
 
 
 @dataclass(frozen=True)
@@ -64,16 +78,17 @@ def _run_git(repo_root: Path, *args: str) -> bytes:
     return completed.stdout
 
 
-def tracked_reference_paths(repo_root: Path) -> list[str]:
+def tracked_references(repo_root: Path) -> list[TrackedReference]:
     raw = _run_git(repo_root, "ls-files", "-s", "-z", "--", REFERENCE_PATHSPEC)
-    paths: list[str] = []
+    references: list[TrackedReference] = []
     for entry in raw.split(b"\0"):
         if not entry:
             continue
         try:
             metadata, encoded_path = entry.split(b"\t", 1)
-            mode, _object_id, stage = metadata.split(b" ", 2)
+            mode, object_id, stage = metadata.split(b" ", 2)
             source_path = encoded_path.decode("utf-8")
+            object_id_text = object_id.decode("ascii")
             mode_text = mode.decode("ascii")
             stage_text = stage.decode("ascii")
         except (UnicodeDecodeError, ValueError) as exc:
@@ -85,8 +100,69 @@ def tracked_reference_paths(repo_root: Path) -> list[str]:
                 f"{source_path}: tracked reference must use git mode 100644 "
                 f"at stage 0; found mode {mode_text}, stage {stage_text}"
             )
-        paths.append(source_path)
-    return sorted(paths, key=lambda value: (value.casefold(), value))
+        references.append(
+            TrackedReference(source_path=source_path, object_id=object_id_text)
+        )
+    return sorted(
+        references,
+        key=lambda reference: (reference.source_path.casefold(), reference.source_path),
+    )
+
+
+def read_index_blob(repo_root: Path, object_id: str) -> bytes:
+    return _run_git(repo_root, "cat-file", "blob", object_id)
+
+
+def read_worktree_reference(repo_root: Path, source_path: str) -> bytes:
+    path = repo_root / source_path
+    try:
+        metadata = os.lstat(path)
+    except FileNotFoundError as exc:
+        raise InventoryError(
+            f"{source_path}: tracked reference missing from working tree"
+        ) from exc
+
+    if stat.S_ISLNK(metadata.st_mode):
+        raise InventoryError(
+            f"{source_path}: tracked reference working tree path must be a "
+            "regular file, not a symlink"
+        )
+    if not stat.S_ISREG(metadata.st_mode):
+        raise InventoryError(
+            f"{source_path}: tracked reference working tree path must be a "
+            "regular file"
+        )
+
+    flags = os.O_RDONLY
+    if hasattr(os, "O_CLOEXEC"):
+        flags |= os.O_CLOEXEC
+    if hasattr(os, "O_NONBLOCK"):
+        flags |= os.O_NONBLOCK
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+
+    try:
+        descriptor = os.open(path, flags)
+    except FileNotFoundError as exc:
+        raise InventoryError(
+            f"{source_path}: tracked reference missing from working tree"
+        ) from exc
+    except OSError as exc:
+        if exc.errno == errno.ELOOP:
+            raise InventoryError(
+                f"{source_path}: tracked reference working tree path must be a "
+                "regular file, not a symlink"
+            ) from exc
+        raise
+
+    with os.fdopen(descriptor, "rb") as handle:
+        opened_metadata = os.fstat(handle.fileno())
+        if not stat.S_ISREG(opened_metadata.st_mode):
+            raise InventoryError(
+                f"{source_path}: tracked reference working tree path must be a "
+                "regular file"
+            )
+        return handle.read()
 
 
 def _strip_wrapper(value: str) -> str:
@@ -245,11 +321,8 @@ def _validate_relationship(
         )
 
 
-def parse_reference(repo_root: Path, source_path: str) -> RepositoryRecord:
-    path = repo_root / source_path
-    if not path.is_file():
-        raise InventoryError(f"tracked reference is not a file: {source_path}")
-    text = path.read_text(encoding="utf-8", errors="strict")
+def parse_reference(source_path: str, content: bytes) -> RepositoryRecord:
+    text = content.decode("utf-8", errors="strict")
     if not text.endswith("\n"):
         raise InventoryError(f"{source_path}: final newline missing")
 
@@ -318,12 +391,24 @@ def parse_reference(repo_root: Path, source_path: str) -> RepositoryRecord:
     )
 
 
-def load_records(repo_root: Path) -> tuple[list[RepositoryRecord], list[str]]:
-    paths = tracked_reference_paths(repo_root)
-    if not paths:
+def load_records(
+    repo_root: Path, *, verify_index_match: bool = False
+) -> tuple[list[RepositoryRecord], list[str]]:
+    references = tracked_references(repo_root)
+    if not references:
         raise InventoryError("no tracked Repository Reference.md files found")
 
-    records = [parse_reference(repo_root, path) for path in paths]
+    records: list[RepositoryRecord] = []
+    for reference in references:
+        content = read_worktree_reference(repo_root, reference.source_path)
+        if verify_index_match:
+            indexed_content = read_index_blob(repo_root, reference.object_id)
+            if content != indexed_content:
+                raise InventoryError(
+                    f"{reference.source_path}: tracked reference differs from "
+                    "git index"
+                )
+        records.append(parse_reference(reference.source_path, content))
     warnings = [
         f"{record.source_path}: optional role missing"
         for record in records
@@ -417,6 +502,7 @@ def _atomic_write(path: Path, content: str) -> None:
     temporary = Path(temporary_name)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as handle:
+            os.fchmod(handle.fileno(), GENERATED_FILE_MODE)
             handle.write(content)
             handle.flush()
             os.fsync(handle.fileno())
@@ -473,7 +559,7 @@ def main(argv: list[str] | None = None) -> int:
             raise InventoryError(
                 f"output path escapes repository: {output_path}"
             ) from exc
-        records, warnings = load_records(repo_root)
+        records, warnings = load_records(repo_root, verify_index_match=args.check)
         expected = render_index(records)
         current = output_path.read_text(encoding="utf-8") if output_path.is_file() else ""
 

@@ -1,13 +1,32 @@
 from __future__ import annotations
 
+import importlib.util
+import os
 import re
 import subprocess
+import sys
 import tempfile
 import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
+from unittest import mock
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "build-repository-index.py"
+
+
+def load_generator_module():
+    spec = importlib.util.spec_from_file_location(
+        "build_repository_index_under_test", SCRIPT_PATH
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.modules.pop(spec.name, None)
+    return module
 
 
 def reference_text(
@@ -240,6 +259,112 @@ class RepositoryInventoryCliTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2, result.stderr)
         self.assertIn("git mode 100644", result.stderr)
         self.assertIn("found mode 120000", result.stderr)
+
+    def test_check_mode_rejects_reference_drift_from_git_index(self) -> None:
+        self.write_reference("room/Repository Reference.md", reference_text("alpha"))
+        built = self.run_cli()
+        self.assertEqual(built.returncode, 0, built.stderr)
+
+        reference = self.root / "room/Repository Reference.md"
+        reference.write_text(reference_text("beta"), encoding="utf-8")
+        checked = self.run_cli("--check")
+
+        self.assertEqual(checked.returncode, 2, checked.stderr)
+        self.assertIn(
+            "room/Repository Reference.md: tracked reference differs from git index",
+            checked.stderr,
+        )
+        self.assertNotIn("repository inventory is stale", checked.stderr)
+
+    def test_write_mode_uses_current_regular_worktree_reference(self) -> None:
+        self.write_reference("room/Repository Reference.md", reference_text("alpha"))
+        reference = self.root / "room/Repository Reference.md"
+        reference.write_text(reference_text("beta"), encoding="utf-8")
+
+        result = self.run_cli()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        text = (self.root / "bestand/10 Repositories/index.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("`beta`", text)
+        self.assertNotIn("`alpha`", text)
+
+        drifted = self.run_cli("--check")
+        self.assertEqual(drifted.returncode, 2, drifted.stderr)
+        self.assertIn("tracked reference differs from git index", drifted.stderr)
+
+        subprocess.run(
+            ["git", "-C", str(self.root), "add", "--", "room/Repository Reference.md"],
+            check=True,
+        )
+        synced = self.run_cli("--check")
+        self.assertEqual(synced.returncode, 0, synced.stderr)
+
+    def test_worktree_symlink_is_rejected_even_when_index_mode_is_regular(
+        self,
+    ) -> None:
+        self.write_reference("room/Repository Reference.md", reference_text("indexed"))
+        target = self.root.parent / f"{self.root.name}-symlink-target.md"
+        target.write_text(reference_text("symlinked"), encoding="utf-8")
+        reference = self.root / "room/Repository Reference.md"
+        reference.unlink()
+        reference.symlink_to(target)
+        try:
+            written = self.run_cli()
+            checked = self.run_cli("--check")
+        finally:
+            target.unlink(missing_ok=True)
+
+        for result in (written, checked):
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertIn("regular file, not a symlink", result.stderr)
+            self.assertNotIn("symlinked", result.stdout)
+            self.assertNotIn("symlinked", result.stderr)
+        self.assertFalse((self.root / "bestand/10 Repositories/index.md").exists())
+
+    def test_missing_worktree_reference_is_rejected(self) -> None:
+        self.write_reference("room/Repository Reference.md", reference_text("alpha"))
+        (self.root / "room/Repository Reference.md").unlink()
+
+        written = self.run_cli()
+        checked = self.run_cli("--check")
+
+        for result in (written, checked):
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertIn("tracked reference missing from working tree", result.stderr)
+
+    def test_existing_output_is_written_with_repository_file_mode(self) -> None:
+        self.write_reference("room/Repository Reference.md", reference_text("alpha"))
+        output = self.root / "bestand/10 Repositories/index.md"
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text("stale\n", encoding="utf-8")
+        os.chmod(output, 0o644)
+
+        result = self.run_cli()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output.stat().st_mode & 0o777, 0o644)
+
+    def test_new_output_is_written_with_repository_file_mode(self) -> None:
+        self.write_reference("room/Repository Reference.md", reference_text("alpha"))
+        output = self.root / "bestand/10 Repositories/index.md"
+        self.assertFalse(output.exists())
+
+        result = self.run_cli()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(output.stat().st_mode & 0o777, 0o644)
+
+    def test_atomic_write_removes_temporary_file_after_replace_error(self) -> None:
+        generator = load_generator_module()
+        output = self.root / "index.md"
+
+        with mock.patch.object(generator.os, "replace", side_effect=OSError("boom")):
+            with self.assertRaises(OSError):
+                generator._atomic_write(output, "content\n")
+
+        self.assertFalse(output.exists())
+        self.assertEqual([], list(self.root.glob(".index.md.*.tmp")))
 
     def test_output_path_must_remain_inside_repository(self) -> None:
         self.write_reference("room/Repository Reference.md", reference_text("alpha"))
