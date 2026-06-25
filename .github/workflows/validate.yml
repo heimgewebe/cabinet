@@ -42,6 +42,9 @@ jobs:
       - name: Test Validator
         run: ./scripts/ci/test-validate-repository.sh
 
+      - name: Test Repository Inventory Generator
+        run: python3 -m unittest discover -s scripts/tests -p 'test_build_repository_index.py'
+
   installer-shadow:
     name: Installer Shadow Test
     runs-on: ubuntu-latest
