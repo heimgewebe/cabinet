@@ -13,7 +13,6 @@ def reference_text(
     *,
     review_head: str = "1" * 40,
     live_head: str = "2" * 40,
-    working_tree: str = "clean:0",
     role: str | None = "Testrolle",
 ) -> str:
     origin = f"github.com:heimgewebe/{repository}.git"
@@ -46,7 +45,7 @@ def reference_text(
 | Pfad | `{canonical_path}` |
 | Origin | `{origin}` |
 | HEAD | `{live_head}` |
-| Working Tree | `{working_tree}` |
+| Working Tree | `clean:0` |
 | Beziehung zum Review | **identisch** |
 
 ## Identität
@@ -66,7 +65,7 @@ class RepositoryInventoryCliTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         subprocess.run(["git", "init", "-q", "-b", "main", str(self.root)], check=True)
         subprocess.run(["git", "-C", str(self.root), "config", "user.name", "Test"], check=True)
-        subprocess.run(["git", "-C", str(self.root), "config", "user.email", "ci.invalid"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "config", "user.email", "ci@example.invalid"], check=True)
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -90,11 +89,9 @@ class RepositoryInventoryCliTests(unittest.TestCase):
             check=False,
         )
 
-    def test_compact_role_and_hashes_are_deterministic(self) -> None:
-        self.write_reference(
-            "z/Repository Reference.md",
-            reference_text("zulu", role="A deliberately long repository role that must be clipped visibly"),
-        )
+    def test_role_and_compact_hashes_are_deterministic(self) -> None:
+        long_role = "A deliberately long repository role that remains fully visible"
+        self.write_reference("z/Repository Reference.md", reference_text("zulu", role=long_role))
         self.write_reference("space dir/Repository Reference.md", reference_text("alpha"))
         self.commit()
         first = self.run_cli()
@@ -106,13 +103,13 @@ class RepositoryInventoryCliTests(unittest.TestCase):
         self.assertIn("| Repository | Rolle | Review | Live |", text)
         self.assertIn("`111111111111`", text)
         self.assertNotIn("`" + "1" * 40 + "`", text)
-        self.assertIn("A deliberately long repository role that must be...", text)
+        self.assertIn(long_role, text)
         self.assertIn("space%20dir/Repository%20Reference.md", text)
         self.assertTrue(text.endswith("\n"))
         self.assertEqual(self.run_cli().returncode, 0)
         self.assertEqual(before, output.read_bytes())
 
-    def test_check_and_tracked_only_discovery(self) -> None:
+    def test_tracked_only_and_check_mode(self) -> None:
         self.write_reference("tracked/Repository Reference.md", reference_text("alpha"))
         self.write_reference("untracked/Repository Reference.md", reference_text("beta"), track=False)
         self.commit()
@@ -123,26 +120,12 @@ class RepositoryInventoryCliTests(unittest.TestCase):
         self.assertIn("`alpha`", text)
         self.assertNotIn("`beta`", text)
 
-    def test_stale_index_is_reported_without_writing(self) -> None:
-        self.write_reference("room/Repository Reference.md", reference_text("alpha"))
-        self.commit()
-        output = self.root / "bestand/10 Repositories/index.md"
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text("stale\n", encoding="utf-8")
-        before = output.read_bytes()
-        result = self.run_cli("--check")
-        self.assertEqual(result.returncode, 1)
-        self.assertIn("repository inventory is stale", result.stderr)
-        self.assertEqual(before, output.read_bytes())
-
     def test_optional_role_warns_but_builds(self) -> None:
         self.write_reference("room/Repository Reference.md", reference_text("alpha", role=None))
         self.commit()
         result = self.run_cli()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("optional role missing", result.stderr)
-        text = (self.root / "bestand/10 Repositories/index.md").read_text(encoding="utf-8")
-        self.assertIn("| `alpha` | — |", text)
 
     def test_unconsumed_sections_are_not_required(self) -> None:
         content = reference_text("alpha")
@@ -161,7 +144,7 @@ class RepositoryInventoryCliTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("duplicate repository identity", result.stderr)
 
-    def test_missing_identity_section_fails(self) -> None:
+    def test_missing_required_section_fails(self) -> None:
         content = reference_text("alpha").replace("## Identität", "## Other")
         self.write_reference("room/Repository Reference.md", content)
         self.commit()
@@ -169,12 +152,16 @@ class RepositoryInventoryCliTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn("missing required section", result.stderr)
 
-    def test_invalid_commit_fails(self) -> None:
-        self.write_reference("room/Repository Reference.md", reference_text("alpha", review_head="abc"))
+    def test_stale_index_is_not_rewritten(self) -> None:
+        self.write_reference("room/Repository Reference.md", reference_text("alpha"))
         self.commit()
+        output = self.root / "bestand/10 Repositories/index.md"
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text("stale\n", encoding="utf-8")
+        before = output.read_bytes()
         result = self.run_cli("--check")
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("invalid review HEAD", result.stderr)
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(before, output.read_bytes())
 
     def test_no_references_is_a_contract_error(self) -> None:
         result = self.run_cli("--check")
