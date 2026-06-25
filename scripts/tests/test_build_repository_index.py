@@ -89,7 +89,7 @@ class RepositoryInventoryCliTests(unittest.TestCase):
             check=False,
         )
 
-    def test_role_and_compact_hashes_are_deterministic(self) -> None:
+    def test_role_excerpt_and_compact_hashes_are_deterministic(self) -> None:
         long_role = "A deliberately long repository role that remains fully visible"
         self.write_reference("z/Repository Reference.md", reference_text("zulu", role=long_role))
         self.write_reference("space dir/Repository Reference.md", reference_text("alpha"))
@@ -100,10 +100,11 @@ class RepositoryInventoryCliTests(unittest.TestCase):
         before = output.read_bytes()
         text = before.decode("utf-8")
         self.assertLess(text.index("`alpha`"), text.index("`zulu`"))
-        self.assertIn("| Repository | Rolle | Review | Live |", text)
+        self.assertIn("| Repository | Rollen-Auszug | Review | Live |", text)
         self.assertIn("`111111111111`", text)
         self.assertNotIn("`" + "1" * 40 + "`", text)
-        self.assertIn(long_role, text)
+        self.assertIn("A deliberately long repository role ...", text)
+        self.assertNotIn(long_role, text)
         self.assertIn("space%20dir/Repository%20Reference.md", text)
         self.assertTrue(text.endswith("\n"))
         self.assertEqual(self.run_cli().returncode, 0)
