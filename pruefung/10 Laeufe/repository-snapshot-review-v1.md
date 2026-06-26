@@ -11,7 +11,7 @@
 - Netzwerkzugriff: **nein**
 - Snapshot-Zeitpunkt(e): `2026-06-23T18:38:45.731368+00:00`
 - Geprüfte Repository References: **5**
-- Authority: Git-Index und versionierte Reference-Bytes im Cabinet-Repository
+- Authority: Git-Index und versionierte, indexidentische Reference-Bytes im Cabinet-Repository
 
 ## Zusammenfassung
 
@@ -28,11 +28,11 @@
 
 | Repository | Commit-Klassifikation | Worktree-Klassifikation | Evidenzstatus | Review-HEAD | Import-HEAD | Beziehung beim Import | Import-Worktree | Erfasst | Quelle |
 |---|---|---|---|---|---|---|---|---|---|
-| `infra` | `snapshot-review-contained` | `snapshot-clean-at-import` | reference-claim: der Importstand soll den Reviewstand enthalten | `5d9b7f840fcd` | `30ab479a3ce7` | Live-Stand enthält Review-Stand | `clean:0` | `2026-06-23T18:38:45.731368+00:00` | `werkstatt/20 Werkzeuge/Infra/Repository Reference.md` |
-| `lenskit` | `snapshot-identical` | `snapshot-dirty-at-import` | direkt-belegt: gespeicherte Review- und Import-HEADs sind identisch | `c692cfc7c51c` | `c692cfc7c51c` | identisch | `dirty:6` | `2026-06-23T18:38:45.731368+00:00` | `werkstatt/20 Werkzeuge/Lenskit/Repository Reference.md` |
-| `steuerboard` | `snapshot-divergence-claimed` | `snapshot-clean-at-import` | reference-claim: Divergenz oder umgeschriebene Historie wurde behauptet | `62669eb95800` | `5a2a9a4e8a33` | divergent oder rewritten/amended | `clean:0` | `2026-06-23T18:38:45.731368+00:00` | `werkstatt/20 Werkzeuge/Steuerboard/Repository Reference.md` |
-| `vibe-lab` | `snapshot-identical` | `snapshot-clean-at-import` | direkt-belegt: gespeicherte Review- und Import-HEADs sind identisch | `869abfb05b46` | `869abfb05b46` | identisch | `clean:0` | `2026-06-23T18:38:45.731368+00:00` | `labor/30 Versuchsstände/Vibe-Lab/Repository Reference.md` |
-| `weltgewebe` | `snapshot-identical` | `snapshot-clean-at-import` | direkt-belegt: gespeicherte Review- und Import-HEADs sind identisch | `bac3c4f7879f` | `bac3c4f7879f` | identisch | `clean:0` | `2026-06-23T18:38:45.731368+00:00` | `weltgewebe/Repository Reference.md` |
+| `infra` | `snapshot-review-contained` | `snapshot-clean-at-import` | reference-claim: der Importstand soll den Reviewstand enthalten | `5d9b7f840fcd59742b75ce19ba2f90fa396ddee8` | `30ab479a3ce79aa5907ab0a21e919dd07c2a5443` | Live-Stand enthält Review-Stand | `clean:0` | `2026-06-23T18:38:45.731368+00:00` | `werkstatt/20 Werkzeuge/Infra/Repository Reference.md` |
+| `lenskit` | `snapshot-identical` | `snapshot-dirty-at-import` | direkt-belegt: gespeicherte Review- und Import-HEADs sind identisch | `c692cfc7c51cdb898e95e7df9ebc762190c0767e` | `c692cfc7c51cdb898e95e7df9ebc762190c0767e` | identisch | `dirty:6` | `2026-06-23T18:38:45.731368+00:00` | `werkstatt/20 Werkzeuge/Lenskit/Repository Reference.md` |
+| `steuerboard` | `snapshot-divergence-claimed` | `snapshot-clean-at-import` | reference-claim: Divergenz oder umgeschriebene Historie wurde behauptet | `62669eb95800d71aeb0d5d1f488e21524321659d` | `5a2a9a4e8a333162196d5cf16cce7d0440de34f7` | divergent oder rewritten/amended | `clean:0` | `2026-06-23T18:38:45.731368+00:00` | `werkstatt/20 Werkzeuge/Steuerboard/Repository Reference.md` |
+| `vibe-lab` | `snapshot-identical` | `snapshot-clean-at-import` | direkt-belegt: gespeicherte Review- und Import-HEADs sind identisch | `869abfb05b466e3be6529250a34a1fea257d1455` | `869abfb05b466e3be6529250a34a1fea257d1455` | identisch | `clean:0` | `2026-06-23T18:38:45.731368+00:00` | `labor/30 Versuchsstände/Vibe-Lab/Repository Reference.md` |
+| `weltgewebe` | `snapshot-identical` | `snapshot-clean-at-import` | direkt-belegt: gespeicherte Review- und Import-HEADs sind identisch | `bac3c4f7879f9e86b098b081b72bf6c133b44462` | `bac3c4f7879f9e86b098b081b72bf6c133b44462` | identisch | `clean:0` | `2026-06-23T18:38:45.731368+00:00` | `weltgewebe/Repository Reference.md` |
 
 ## Prüfreihenfolge für einen späteren Live-Sammler
 
