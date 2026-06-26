@@ -318,37 +318,44 @@ class RepositoryInventoryHygieneTests(unittest.TestCase):
         expected = reference_text("alpha").encode("utf-8")
         target.write_bytes(expected)
 
-        opened: list[int] = []
+        live_directory_fds: set[int] = set()
+        peak_directory_fds = 0
         original_root = implementation._open_root_directory
         original_parent = implementation._open_parent_directory
+        original_close = implementation.os.close
 
         def tracked_root(repo_root: Path) -> int:
+            nonlocal peak_directory_fds
             descriptor = original_root(repo_root)
-            opened.append(descriptor)
+            live_directory_fds.add(descriptor)
+            peak_directory_fds = max(peak_directory_fds, len(live_directory_fds))
             return descriptor
 
         def tracked_parent(
             source_path: str, component: str, directory_fd: int
         ) -> int:
-            for superseded in opened[:-1]:
-                with self.assertRaises(OSError):
-                    os.fstat(superseded)
-            os.fstat(directory_fd)
+            nonlocal peak_directory_fds
+            self.assertEqual(live_directory_fds, {directory_fd})
             descriptor = original_parent(source_path, component, directory_fd)
-            opened.append(descriptor)
+            live_directory_fds.add(descriptor)
+            peak_directory_fds = max(peak_directory_fds, len(live_directory_fds))
             return descriptor
+
+        def tracked_close(descriptor: int) -> None:
+            live_directory_fds.discard(descriptor)
+            original_close(descriptor)
 
         with mock.patch.object(
             implementation, "_open_root_directory", side_effect=tracked_root
         ), mock.patch.object(
             implementation, "_open_parent_directory", side_effect=tracked_parent
+        ), mock.patch.object(
+            implementation.os, "close", side_effect=tracked_close
         ):
             self.assertEqual(module.read_worktree_reference(self.root, relative), expected)
 
-        self.assertGreater(len(opened), 2)
-        for descriptor in opened:
-            with self.assertRaises(OSError):
-                os.fstat(descriptor)
+        self.assertEqual(live_directory_fds, set())
+        self.assertEqual(peak_directory_fds, 2)
 
 
 if __name__ == "__main__":
