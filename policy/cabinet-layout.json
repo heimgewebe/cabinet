@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "defaultRoom": "vorzimmer",
+  "defaultRoom": "steuerung",
   "rooms": {
     "bestand": {
       "id": "bestand-room",
@@ -39,26 +39,16 @@
       "name": "Werkstatt"
     }
   },
-  "systemAgents": {
-    "editor": {
-      "active": true,
-      "heartbeatEnabled": false,
-      "canDispatch": false
-    }
-  },
-  "scheduler": {
-    "jobs": 0,
-    "heartbeats": 0
-  },
   "forbiddenTopLevelRooms": [
-    "cockpit",
-    "heim-pc",
-    "weben"
+    "00 Eingang",
+    "10 Aktiv",
+    "20 Wissen",
+    "30 Projekte",
+    "40 Quellen",
+    "50 Archiv"
   ],
-  "forbiddenNames": [
-    "model-lab",
-    "model_lab",
-    "sichter",
-    "weben"
-  ]
+  "systemAgents": {
+    "editor": "global-editor",
+    "router": "global-router"
+  }
 }
