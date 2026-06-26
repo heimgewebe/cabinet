@@ -45,6 +45,9 @@ jobs:
       - name: Test Repository Inventory Generator
         run: python3 -m unittest discover -s scripts/tests -p 'test_build_repository_index.py'
 
+      - name: Test Repository Inventory Hygiene
+        run: python3 -m unittest discover -s scripts/tests -p 'test_repository_inventory_hygiene.py'
+
   installer-shadow:
     name: Installer Shadow Test
     runs-on: ubuntu-latest
