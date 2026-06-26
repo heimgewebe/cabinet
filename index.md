@@ -10,6 +10,6 @@ Cabinet ordnet Repositories, Projekte, Prüfungen und nächste Schritte.
 
 ## Parallelphase
 
-Die bisherigen sechs Räume bleiben vorerst lesbar. Sie sind Migrationsquellen und keine dauerhafte Zielstruktur. Der technische Default bleibt bis zum lokalen Cutover `vorzimmer`.
+Die bisherigen sechs Räume bleiben vorerst lesbar. Sie sind Migrationsquellen und keine dauerhafte Zielstruktur. Der versionierte Default ist `steuerung`; lokale, unversionierte Workspace-Konfigurationen müssen vor der Nutzung im lokalen Prüfmodus gesichert und auf denselben Room abgeglichen werden.
 
 Die Zielarchitektur und die Migrationsregeln stehen in `docs/blueprints/repository-oversight-layout-v1.md`.

@@ -24,7 +24,17 @@ Beantwortet: **Was wird entschieden und was geschieht als Nächstes?**
 
 Enthält Lageübersicht, Entscheidungen, priorisierte Aufgaben, Blocker und Übergaben.
 
-`steuerung` ist der Ziel-Default. Im Parallelbetrieb bleibt `vorzimmer` der technische Default, bis Bestand und Prüfung belastbare Inhalte liefern und die lokale Workspace-Konfiguration gesichert sowie kontrolliert umgestellt wurde.
+`steuerung` ist der versionierte und technische Default. `vorzimmer` bleibt während der Parallelphase lesbar und wird erst nach belegter Inhaltsmigration entfernt.
+
+## Workspace-Cutover-Vertrag
+
+- `.home/home.json` und `policy/cabinet-layout.json` erklären `steuerung` zum verbindlichen Default.
+- Die lokale `.agents/.config/workspace.json` bleibt unversioniert und darf nicht durch CI oder einen Repository-Checkout überschrieben werden.
+- Vor einer lokalen Änderung wird die bestehende Workspace-Datei samt Dateimodus und SHA-256 außerhalb des Repositories gesichert.
+- Beim Abgleich wird ausschließlich `room.slug` auf `steuerung` gesetzt; unbekannte Felder bleiben erhalten.
+- Danach muss `python3 scripts/check-cabinet-layout.py --mode local .` erfolgreich sein.
+- Scheitert die Prüfung, werden die gesicherten Originalbytes und der ursprüngliche Dateimodus wiederhergestellt.
+- Ein Rollback darf vorübergehend vom versionierten Default abweichen; der lokale Prüfmodus zeigt diesen Zustand anschließend ausdrücklich als Drift.
 
 ## Grenzen
 
@@ -99,7 +109,7 @@ Bestehende Inhalte werden einzeln als `keep`, `move`, `split`, `archive` oder `d
 1. Drei Zielräume parallel anlegen; alte Räume bleiben lesbar.
 2. Repository-Snapshotkatalog aus versionierten Repository References deterministisch erzeugen und in CI prüfen.
 3. Datierte Snapshots lokal prüfen und eine erste Lageansicht ableiten, ohne Aktualität zu unterstellen.
-4. Lokale Workspace-Konfiguration sichern und kontrolliert auf `steuerung` umstellen.
+4. Versionierten Default auf `steuerung` umstellen; lokale Workspace-Konfigurationen hostbezogen sichern, abgleichen und prüfen.
 5. Projektkarten aus bestätigten Repositorybeziehungen und Vorhaben aufbauen.
 6. Deterministischen Sammler für freigegebene Repositories bauen; erst dieser erzeugt neu erhobene Zustandsdaten.
 7. Evidence-Pflicht, stabile Fingerprints und Hinweis/Bestätigt-Trennung einführen.
