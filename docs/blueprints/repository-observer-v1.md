@@ -17,7 +17,9 @@ Jeder Eintrag enthält:
 - den erwarteten kanonischen GitHub-Remote;
 - den Pfad einer vorhandenen `Repository Reference.md`.
 
-Die Policy wird gegen die Reference geprüft. Repository-ID und kanonischer Remote müssen dort ausdrücklich vorkommen. Doppelte IDs, Verzeichnisse oder References werden abgewiesen.
+Die ausführbare Oberfläche akzeptiert Policy und References nur als reguläre Git-Blobs im Modus `100644` oder `100755` auf Stage `0`. Ihre Working-Tree-Bytes müssen bytegenau dem Git-Index entsprechen. Ungetrackte oder nur lokal veränderte Freigaben werden dadurch abgewiesen.
+
+Anschließend wird die Policy gegen die Reference geprüft. Repository-ID und kanonischer Remote müssen dort ausdrücklich vorkommen. Doppelte IDs, Verzeichnisse oder References sowie Remote-Pfadsegmente `.` oder `..` werden abgewiesen.
 
 Repositories, die nur zufällig neben freigegebenen Repositories unter `source-root` liegen, werden weder geöffnet noch ausgegeben.
 
@@ -41,7 +43,7 @@ Ein Lauf benötigt einen expliziten RFC3339-Zeitpunkt mit Zeitzone und ganzen Se
 
 Bei identischer Policy, identischen Git-Zuständen und demselben normalisierten Zeitpunkt entstehen identische JSON-Bytes und dieselbe `collection_id`.
 
-Die Policy-SHA-256 ist Teil des Ergebnisses. Änderungen an Freigaben oder Policy-Formatierung bleiben dadurch sichtbar.
+Die SHA-256 der tatsächlich index-identisch geprüften Policy ist Teil des Ergebnisses. Änderungen an Freigaben oder Policy-Formatierung bleiben dadurch sichtbar.
 
 ## Sicherheitsgrenzen
 
@@ -53,6 +55,7 @@ Die Policy-SHA-256 ist Teil des Ergebnisses. Änderungen an Freigaben oder Polic
 - Unerwartete Git-Fehler werden nicht als „kein Upstream“ umgedeutet.
 - Ausgabedateien werden atomar mit Modus `0600` geschrieben; der Zielordner muss bereits existieren und symlinkfrei sein.
 - Die Ausgabe ist eine Beobachtung, keine bestätigte Evidence und keine aktuelle Repository Reference.
+- Unterstützte Bedienoberfläche ist `scripts/observe-repositories.py`; die Python-Module darunter sind Implementierungsdetails.
 
 ## Bedienung
 
