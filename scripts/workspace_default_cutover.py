@@ -25,6 +25,7 @@ POLICY_RELATIVE = Path("policy/cabinet-layout.json")
 VALIDATOR_RELATIVE = Path("scripts/check-cabinet-layout.py")
 BACKUP_SCHEMA = "cabinet.workspace-cutover.v1"
 BACKUP_ID_RE = re.compile(r"^[0-9]{8}T[0-9]{6}Z-[0-9a-f]{8}$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 Validator = Callable[[Path], None]
 
 
@@ -40,7 +41,7 @@ def _reject_symlink_components(path: Path, label: str) -> None:
     path = _absolute(path)
     current = Path(path.anchor)
     for component in path.parts[1:]:
-        current = current / component
+        current /= component
         try:
             metadata = os.lstat(current)
         except FileNotFoundError:
@@ -64,7 +65,7 @@ def _require_directory(path: Path, label: str) -> Path:
 def _require_regular_file(root: Path, relative: Path, label: str) -> Path:
     if relative.is_absolute() or not relative.parts or ".." in relative.parts:
         raise CutoverError(f"{label} uses an unsafe relative path: {relative}")
-    root = _require_directory(root, "repository root")
+    root = _require_directory(root, f"{label} root")
     path = root / relative
     _reject_symlink_components(path, label)
     try:
@@ -87,8 +88,7 @@ def _load_json(raw: bytes, label: str) -> dict[str, Any]:
 
 
 def _read_json_file(root: Path, relative: Path, label: str) -> dict[str, Any]:
-    path = _require_regular_file(root, relative, label)
-    return _load_json(path.read_bytes(), label)
+    return _load_json(_require_regular_file(root, relative, label).read_bytes(), label)
 
 
 def _read_contract(repo_root: Path) -> str:
@@ -114,9 +114,7 @@ def _read_workspace(
     repo_root: Path,
 ) -> tuple[Path, bytes, int, dict[str, Any], str]:
     path = _require_regular_file(
-        repo_root,
-        WORKSPACE_RELATIVE,
-        "local workspace configuration",
+        repo_root, WORKSPACE_RELATIVE, "local workspace configuration"
     )
     raw = path.read_bytes()
     mode = stat.S_IMODE(os.lstat(path).st_mode)
@@ -167,24 +165,19 @@ def _atomic_write(path: Path, content: bytes, mode: int) -> None:
         raise
 
 
-def _atomic_create(path: Path, content: bytes, mode: int) -> None:
+def _exclusive_create(path: Path, content: bytes, mode: int) -> None:
     _reject_symlink_components(path.parent, "create parent")
-    descriptor, temporary_name = tempfile.mkstemp(
-        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
-    )
-    temporary = Path(temporary_name)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    descriptor = os.open(path, flags, mode)
     try:
         with os.fdopen(descriptor, "wb") as handle:
             os.fchmod(handle.fileno(), mode)
             handle.write(content)
             handle.flush()
             os.fsync(handle.fileno())
-        if path.exists() or path.is_symlink():
-            raise CutoverError(f"refusing to replace existing backup file: {path}")
-        os.replace(temporary, path)
         _fsync_directory(path.parent)
     except Exception:
-        temporary.unlink(missing_ok=True)
+        path.unlink(missing_ok=True)
         raise
 
 
@@ -199,7 +192,11 @@ def _ensure_state_root(state_root: Path, repo_root: Path) -> Path:
     metadata = os.lstat(state_root)
     if not stat.S_ISDIR(metadata.st_mode):
         raise CutoverError(f"backup state root is not a directory: {state_root}")
-    os.chmod(state_root, 0o700)
+    mode = stat.S_IMODE(metadata.st_mode)
+    if mode & 0o077:
+        raise CutoverError(
+            f"backup state root permissions are too broad: {mode:04o}; expected 0700"
+        )
     return state_root
 
 
@@ -211,7 +208,7 @@ def _backup_id(now: datetime) -> str:
 def _write_manifest(path: Path, manifest: dict[str, Any], *, create: bool) -> None:
     content = _serialize_json(manifest)
     if create:
-        _atomic_create(path, content, 0o600)
+        _exclusive_create(path, content, 0o600)
     else:
         _atomic_write(path, content, 0o600)
 
@@ -247,7 +244,7 @@ def _create_backup(
         "status": "prepared",
     }
     try:
-        _atomic_create(backup_file, original, 0o600)
+        _exclusive_create(backup_file, original, 0o600)
         _write_manifest(manifest_file, manifest, create=True)
     except Exception:
         manifest_file.unlink(missing_ok=True)
@@ -259,9 +256,7 @@ def _create_backup(
 
 def run_layout_validator(repo_root: Path) -> None:
     validator = _require_regular_file(
-        repo_root,
-        VALIDATOR_RELATIVE,
-        "layout validator",
+        repo_root, VALIDATOR_RELATIVE, "layout validator"
     )
     completed = subprocess.run(
         [sys.executable, str(validator), "--mode", "local", str(repo_root)],
@@ -307,8 +302,6 @@ def apply_cutover(
     updated = copy.deepcopy(workspace)
     updated["room"]["slug"] = target
     replacement = _serialize_json(updated)
-
-    effective_now = now or datetime.now(timezone.utc)
     backup_id, backup_dir, manifest = _create_backup(
         state_root,
         repo_root,
@@ -316,7 +309,7 @@ def apply_cutover(
         original_mode,
         previous,
         target,
-        effective_now,
+        now or datetime.now(timezone.utc),
     )
     manifest_path = backup_dir / "manifest.json"
     if (
@@ -339,14 +332,14 @@ def apply_cutover(
         restore_error: Exception | None = None
         try:
             _atomic_write(workspace_path, original, original_mode)
-        except Exception as rollback_exc:  # pragma: no cover - catastrophic path
+        except Exception as rollback_exc:  # pragma: no cover
             restore_error = rollback_exc
         manifest["status"] = "rollback-failed" if restore_error else "rolled-back"
         manifest["failure"] = str(exc)
         manifest["rolled_back_at"] = datetime.now(timezone.utc).isoformat()
         try:
             _write_manifest(manifest_path, manifest, create=False)
-        except Exception as manifest_exc:  # pragma: no cover - diagnostic fallback
+        except Exception as manifest_exc:  # pragma: no cover
             if restore_error is None:
                 restore_error = manifest_exc
         if restore_error is not None:
@@ -357,7 +350,6 @@ def apply_cutover(
         raise CutoverError(
             f"workspace cutover failed; original state restored: {exc}"
         ) from exc
-
     return backup_id
 
 
@@ -365,7 +357,7 @@ def _load_backup(
     repo_root: Path,
     state_root: Path,
     backup_id: str,
-) -> tuple[Path, Path, dict[str, Any], bytes, int]:
+) -> tuple[Path, dict[str, Any], bytes, int]:
     if not BACKUP_ID_RE.fullmatch(backup_id):
         raise CutoverError(f"invalid backup id: {backup_id!r}")
     state_root = _ensure_state_root(state_root, repo_root)
@@ -391,24 +383,36 @@ def _load_backup(
     raw_mode = manifest.get("original_mode")
     if not isinstance(raw_mode, str) or not re.fullmatch(r"0[0-7]{3}", raw_mode):
         raise CutoverError("backup manifest contains an invalid original mode")
-    return backup_dir, manifest_path, manifest, original, int(raw_mode, 8)
+    return manifest_path, manifest, original, int(raw_mode, 8)
 
 
 def rollback_cutover(repo_root: Path, state_root: Path, backup_id: str) -> None:
     repo_root = _require_directory(repo_root, "repository root")
-    _, manifest_path, manifest, original, original_mode = _load_backup(
+    manifest_path, manifest, original, original_mode = _load_backup(
         repo_root, state_root, backup_id
     )
-    workspace_path = _require_regular_file(
-        repo_root,
-        WORKSPACE_RELATIVE,
-        "local workspace configuration",
-    )
+    workspace_path, current, current_mode, _, _ = _read_workspace(repo_root)
+
+    if current == original and current_mode == original_mode:
+        manifest["status"] = "rolled-back-explicitly"
+        manifest["explicit_rollback_at"] = datetime.now(timezone.utc).isoformat()
+        _write_manifest(manifest_path, manifest, create=False)
+        return
+
+    applied_sha = manifest.get("applied_sha256")
+    if manifest.get("status") != "applied" or not isinstance(applied_sha, str):
+        raise CutoverError("backup does not describe an applied cutover")
+    if not SHA256_RE.fullmatch(applied_sha):
+        raise CutoverError("backup manifest contains an invalid applied hash")
+    if _sha256(current) != applied_sha or current_mode != original_mode:
+        raise CutoverError(
+            "workspace changed since cutover; refusing rollback to avoid data loss"
+        )
+
     _atomic_write(workspace_path, original, original_mode)
     if workspace_path.read_bytes() != original:
         raise CutoverError("rollback did not restore exact workspace bytes")
-    restored_mode = stat.S_IMODE(os.lstat(workspace_path).st_mode)
-    if restored_mode != original_mode:
+    if stat.S_IMODE(os.lstat(workspace_path).st_mode) != original_mode:
         raise CutoverError("rollback did not restore the original workspace mode")
     manifest["status"] = "rolled-back-explicitly"
     manifest["explicit_rollback_at"] = datetime.now(timezone.utc).isoformat()
@@ -420,9 +424,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("action", choices=("check", "apply", "rollback"))
     parser.add_argument("backup_id", nargs="?")
     parser.add_argument(
-        "--repo-root",
-        type=Path,
-        default=Path(__file__).resolve().parents[1],
+        "--repo-root", type=Path, default=Path(__file__).resolve().parents[1]
     )
     parser.add_argument(
         "--state-root",
