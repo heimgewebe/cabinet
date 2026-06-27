@@ -1,0 +1,29 @@
+name: Project Cards
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+      - run: python3 scripts/check-project-cards.py .
+      - run: python3 scripts/check-project-card-provenance.py .
+      - run: timeout --signal=TERM --kill-after=10s 60s python3 -m unittest discover -s scripts/tests -p 'test_project_card*.py'
