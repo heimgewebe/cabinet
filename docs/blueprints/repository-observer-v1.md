@@ -35,6 +35,8 @@ Für jedes freigegebene Repository werden read-only erhoben:
 - Anzahl logischer Porcelain-v2-Statusdatensätze;
 - SHA-256 der rohen NUL-separierten Statusbytes.
 
+Der roh in `.git/config` gespeicherte Origin wird unabhängig geprüft. Git-URL-Umschreibungen wie `url.*.insteadOf` dürfen keinen anderen Remote als freigegeben erscheinen lassen.
+
 Dateinamen und Inhalte uncommitteter Änderungen werden nicht in das Ergebnis geschrieben. Absolute Hostpfade werden ebenfalls nicht ausgegeben; Pfade bleiben relativ zum übergebenen `source-root`.
 
 ## Determinismus
@@ -52,8 +54,12 @@ Die SHA-256 der tatsächlich index-identisch geprüften Policy ist Teil des Erge
 - Nur direkte, in der Policy benannte Unterordner werden geöffnet.
 - Symlink-Komponenten, fehlende Repositories und falsche Repository-Toplevels scheitern fail-closed.
 - Der Origin muss nach Normalisierung exakt dem freigegebenen Remote entsprechen.
+- Ambient gesetzte Git-Routing-, Konfigurations- und Trace-Variablen werden entfernt.
+- System- und globale Git-Konfiguration werden ausgeschaltet; lokale Freigabe- und Remote-Fakten bleiben lesbar.
+- Fsmonitor, Untracked-Cache und Submodule-Rekursion werden für den Lauf deaktiviert.
 - Unerwartete Git-Fehler werden nicht als „kein Upstream“ umgedeutet.
 - Ausgabedateien werden atomar mit Modus `0600` geschrieben; der Zielordner muss bereits existieren und symlinkfrei sein.
+- Das Ausgabeziel muss außerhalb von Cabinet und des gesamten `source-root` liegen.
 - Die Ausgabe ist eine Beobachtung, keine bestätigte Evidence und keine aktuelle Repository Reference.
 - Unterstützte Bedienoberfläche ist `scripts/observe-repositories.py`; die Python-Module darunter sind Implementierungsdetails.
 
