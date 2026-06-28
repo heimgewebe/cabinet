@@ -9,6 +9,7 @@ import os
 import subprocess
 import sys
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -109,17 +110,39 @@ def _verify_index_identical(repo_root: Path, relative: Path) -> None:
         )
 
 
+def _validate_evidence_policy(cards: list[dict[str, Any]]) -> None:
+    today = date.today()
+    for metadata in cards:
+        card_id = metadata["id"]
+        reviewed_at = date.fromisoformat(metadata["reviewed_at"])
+        if reviewed_at > today:
+            raise ProvenanceError(
+                f"project card {card_id!r} has a future reviewed_at date: {reviewed_at}"
+            )
+        for raw_source in metadata["sources"]:
+            source = Path(raw_source)
+            if source.is_relative_to(PROJECT_DIR):
+                raise ProvenanceError(
+                    f"project card {card_id!r} may not use the project-card directory "
+                    f"as evidence: {raw_source}"
+                )
+
+
 def verify_provenance(repo_root: Path) -> list[Path]:
     repo_root = Path(os.path.abspath(repo_root.expanduser()))
     validator = _load_validator()
     cards = validator.validate_project_cards(repo_root)
+    _validate_evidence_policy(cards)
 
     required_paths: set[Path] = {PROJECT_DIR / "index.md"}
     for metadata in cards:
         required_paths.add(PROJECT_DIR / f"{metadata['id']}.md")
         required_paths.update(Path(source) for source in metadata["sources"])
 
-    ordered = sorted(required_paths, key=lambda path: (path.as_posix().casefold(), path.as_posix()))
+    ordered = sorted(
+        required_paths,
+        key=lambda path: (path.as_posix().casefold(), path.as_posix()),
+    )
     for relative in ordered:
         _verify_index_identical(repo_root, relative)
     return ordered
