@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -25,11 +25,18 @@ def _load_cards(repo_root: Path) -> list[dict[str, Any]]:
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
-    return module.validate_project_cards(repo_root)
+    try:
+        return module.validate_project_cards(repo_root)
+    except module.ProjectCardError as exc:
+        raise CardPolicyError(str(exc)) from exc
+
+
+def _utc_today() -> date:
+    return datetime.now(timezone.utc).date()
 
 
 def validate_policy(cards: list[dict[str, Any]], *, today: date | None = None) -> None:
-    effective_today = date.today() if today is None else today
+    effective_today = _utc_today() if today is None else today
     for metadata in cards:
         card_id = metadata["id"]
         reviewed_at = date.fromisoformat(metadata["reviewed_at"])
@@ -45,13 +52,22 @@ def validate_policy(cards: list[dict[str, Any]], *, today: date | None = None) -
                 )
 
 
-def main(argv: list[str] | None = None) -> int:
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("repo_root", nargs="?", type=Path, default=Path.cwd())
-    args = parser.parse_args(argv)
+    parser.add_argument(
+        "--as-of",
+        type=date.fromisoformat,
+        help="validation date in ISO format; defaults to the current UTC date",
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
     try:
         cards = _load_cards(args.repo_root)
-        validate_policy(cards)
+        validate_policy(cards, today=args.as_of)
     except (CardPolicyError, OSError, UnicodeError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
