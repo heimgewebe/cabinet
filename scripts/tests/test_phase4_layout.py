@@ -38,14 +38,18 @@ class RepositoryPhaseFourContractTests(unittest.TestCase):
         self.assertEqual(home["defaultRoom"], "steuerung")
         self.assertEqual(home["lastActiveRoom"], "steuerung")
 
-    def test_vorzimmer_remains_a_real_room(self) -> None:
+    def test_vorzimmer_is_a_retained_legacy_collection(self) -> None:
         policy = json.loads(
             (REPO_ROOT / "policy/cabinet-layout.json").read_text(encoding="utf-8")
         )
-        manifest = REPO_ROOT / "vorzimmer/.cabinet"
-        self.assertIn("vorzimmer", policy["rooms"])
-        self.assertTrue(manifest.is_file())
-        self.assertFalse(manifest.is_symlink())
+        navigation = json.loads(
+            (REPO_ROOT / "policy/cabinet-navigation.json").read_text(encoding="utf-8")
+        )
+        manifest = (REPO_ROOT / "vorzimmer/.cabinet").read_text(encoding="utf-8")
+        self.assertEqual(set(policy["rooms"]), {"bestand", "pruefung", "steuerung"})
+        self.assertIn("vorzimmer", navigation["legacyCollections"])
+        self.assertIn("kind: legacy-collection", manifest)
+        self.assertNotIn("kind: room", manifest)
 
     def test_blueprint_names_executable_cutover_contract(self) -> None:
         blueprint = (
@@ -80,7 +84,12 @@ class PhaseFourLayoutTests(unittest.TestCase):
                 {
                     "schemaVersion": 1,
                     "defaultRoom": "steuerung",
-                    "rooms": {"steuerung": {"id": "steuerung-room"}},
+                    "rooms": {
+                        "steuerung": {
+                            "id": "steuerung-room",
+                            "name": "Steuerung",
+                        }
+                    },
                 }
             ),
             encoding="utf-8",
@@ -102,7 +111,12 @@ class PhaseFourLayoutTests(unittest.TestCase):
         path.write_text(
             json.dumps(
                 {
-                    "room": {"slug": slug, "label": "kept"},
+                    "room": {
+                        "slug": slug,
+                        "id": f"{slug}-room",
+                        "name": "Steuerung" if slug == "steuerung" else "Vorzimmer",
+                        "label": "kept",
+                    },
                     "provider": {"name": "local"},
                     "unknown": [1, 2, 3],
                 },
@@ -127,6 +141,8 @@ class PhaseFourLayoutTests(unittest.TestCase):
         self.assertIsNotNone(backup_id)
         updated = json.loads(workspace.read_text(encoding="utf-8"))
         self.assertEqual(updated["room"]["slug"], "steuerung")
+        self.assertEqual(updated["room"]["id"], "steuerung-room")
+        self.assertEqual(updated["room"]["name"], "Steuerung")
         self.assertEqual(updated["room"]["label"], "kept")
         self.assertEqual(updated["provider"], {"name": "local"})
         self.assertEqual(updated["unknown"], [1, 2, 3])
@@ -148,6 +164,47 @@ class PhaseFourLayoutTests(unittest.TestCase):
         self.assertEqual(
             stat.S_IMODE(os.lstat(backup_dir / "workspace.json").st_mode), 0o600
         )
+
+    def test_apply_repairs_stale_identity_when_slug_is_already_target(self) -> None:
+        workspace = self._write_workspace("steuerung")
+        value = json.loads(workspace.read_text(encoding="utf-8"))
+        value["room"]["id"] = "vorzimmer-room"
+        value["room"]["name"] = "Vorzimmer"
+        workspace.write_text(
+            json.dumps(value, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        backup_id = apply_cutover(
+            self.root,
+            self.state,
+            validator=lambda _: None,
+        )
+
+        self.assertIsNotNone(backup_id)
+        updated = json.loads(workspace.read_text(encoding="utf-8"))
+        self.assertEqual(
+            updated["room"],
+            {
+                "slug": "steuerung",
+                "id": "steuerung-room",
+                "name": "Steuerung",
+                "label": "kept",
+            },
+        )
+
+    def test_check_rejects_stale_identity_with_target_slug(self) -> None:
+        workspace = self._write_workspace("steuerung")
+        value = json.loads(workspace.read_text(encoding="utf-8"))
+        value["room"]["id"] = "vorzimmer-room"
+        value["room"]["name"] = "Vorzimmer"
+        workspace.write_text(
+            json.dumps(value, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        with self.assertRaisesRegex(CutoverError, "room.id"):
+            check_cutover(self.root, validator=lambda _: None)
 
     def test_apply_is_idempotent_when_already_aligned(self) -> None:
         self._write_workspace("steuerung")

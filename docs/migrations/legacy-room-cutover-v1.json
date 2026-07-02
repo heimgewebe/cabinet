@@ -1,0 +1,15 @@
+{
+  "schema": "cabinet.legacy-room-cutover.v1",
+  "status": "active-manifests-retired",
+  "runtimeVerification": "pending-local-smoke",
+  "activeRooms": ["bestand", "pruefung", "steuerung"],
+  "legacyCollections": {
+    "vorzimmer": {"successor": "steuerung", "axis": "intake-workflow"},
+    "heimgewebe": {"successor": "bestand", "axis": "domain"},
+    "weltgewebe": {"successor": "bestand", "axis": "domain"},
+    "werkstatt": {"successor": "steuerung", "axis": "work-regime"},
+    "labor": {"successor": "pruefung", "axis": "work-regime"},
+    "betrieb": {"successor": "pruefung", "axis": "work-regime"}
+  },
+  "contentPolicy": "classify-per-file-before-removal"
+}
