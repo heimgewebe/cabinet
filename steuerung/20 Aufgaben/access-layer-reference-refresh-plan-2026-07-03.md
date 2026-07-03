@@ -18,4 +18,3 @@ branch main, worktree clean, historical PR 53 merged.
 1. Keep this as a planning artifact.
 2. Create a separate before-after proposal.
 3. Run the proposal guard.
-
