@@ -8,6 +8,8 @@ The repository was checked live again before any reference refresh.
 
 ```text
 repository: infra
+source: infra local checkout after fetch
+observed: 2026-07-03
 branch: main
 head: 627923f09b2b3b5e0d25aa8a61af8a2b79cdd711
 origin_main: 627923f09b2b
