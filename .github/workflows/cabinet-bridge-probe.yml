@@ -87,7 +87,7 @@ jobs:
           PY
 
       - name: Upload bridge probe report
-        uses: actions/upload-artifact@7b0c40020db72c7351936b879749aa9b41d7ca11 # v4.6.2
+        uses: actions/upload-artifact@v4
         with:
           name: cabinet-bridge-probe-report
           path: |
