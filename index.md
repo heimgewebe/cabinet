@@ -2,11 +2,19 @@
 
 Cabinet ordnet Repositories, Projekte, Prüfungen und nächste Schritte.
 
+## Entree
+
+- [README](README.md) — kanonischer Schnellstart fuer Menschen und GitHub.
+- [Agent Entry](AGENTS.md) — Lesereihenfolge, Wahrheitsgrenzen und Stop-Kriterien fuer LLMs und Agenten.
+- [Ecosystem Map v0](docs/blueprints/ecosystem-map-v0.md) — Systemkarte, Dateien, Pflegeprinzipien und Reifekriterien.
+- [Mermaidkarte](rendered/ecosystem-map.mmd) — gerenderte Graphansicht.
+- [Heim-PC Operatorium Index v0](docs/blueprints/heim-pc-operatorium-index-v0.md) — heim-pc als lokale Operatorium-Schicht.
+
 ## Aktive Räume
 
-- **Bestand** – Repositories, Projekte, Quellen und Beziehungen
-- **Prüfung** – Läufe, Belege, Befunde, Widersprüche und Risiken
-- **Steuerung** – Lage, Entscheidungen, Aufgaben, Blocker und Übergaben
+- [Bestand](bestand/index.md) – Repositories, Projekte, Quellen und Beziehungen
+- [Prüfung](pruefung/index.md) – Läufe, Belege, Befunde, Widersprüche und Risiken
+- [Steuerung](steuerung/index.md) – Lage, Entscheidungen, Aufgaben, Blocker und Übergaben
 
 ## Legacy-Sammlungen
 
