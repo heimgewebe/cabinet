@@ -11,7 +11,8 @@ Dieses Dokument ist der kanonische Einstieg für LLMs und Agenten im Cabinet-Rep
 5. [docs/blueprints/o.json](docs/blueprints/o.json) — kompakter maschinenlesbarer Seed.
 6. [registry/ecosystem/nodes.json](registry/ecosystem/nodes.json), [registry/ecosystem/edges.json](registry/ecosystem/edges.json), [registry/ecosystem/claims.jsonl](registry/ecosystem/claims.jsonl) — Graph, Kanten und Claims.
 7. [docs/blueprints/heim-pc-operatorium-index-v0.md](docs/blueprints/heim-pc-operatorium-index-v0.md) — Heim-PC als Operatorium.
-8. [docs/blueprints/agent-routing-brief-v0.md](docs/blueprints/agent-routing-brief-v0.md) — Aufgaben- und Agentenroute.
+8. [docs/blueprints/cabinet-maintenance-radar-v0.md](docs/blueprints/cabinet-maintenance-radar-v0.md) — Maintenance-Radar, Scan-Grenzen und Heimlern-Rueckkopplung.
+9. [docs/blueprints/agent-routing-brief-v0.md](docs/blueprints/agent-routing-brief-v0.md) — Aufgaben- und Agentenroute.
 
 ## Wahrheitsordnung
 
@@ -31,14 +32,15 @@ Dieses Dokument ist der kanonische Einstieg für LLMs und Agenten im Cabinet-Rep
 5. Widersprüche sichtbar lassen und einordnen.
 6. Mutationen eng schneiden: Wegweiser, Belege oder klar begrenzte Docs/Code-Slices.
 7. Kein Merge und kein direkter Main-Eingriff ohne aktuelle Head-Prüfung, Diff-Review und berücksichtigte Findings.
-8. Erfinde keine Dateiinhalte. Wenn Kontext fehlt, fordere einen Read-Dump über Lenskit/RepoBrief an oder benenne die Leerstelle ausdrücklich.
+8. Erfinde keine Dateiinhalte. Wenn Kontext fehlt, fordere einen extern erzeugten RepoBrief-/Lenskit-Dump an oder benenne die Leerstelle ausdrücklich.
 
 ## Organrollen
 
-- Cabinet: Sinn, Evidenz, Priorisierung, Lernen, Kartensemantik.
+- Cabinet: Sinn, Evidenz, Priorisierung, Lernen, Kartensemantik, Kohärenzradar und Wartungsbefunde.
 - Bureau: Aufgaben, Taktung, Kandidaten, Receipts, Rückmeldung.
 - Grabowski: lokale/repo-bezogene Ausführung und Review-Gates.
-- RepoBrief / Lenskit: zitierfähige Kontextansicht.
+- RepoBrief / Lenskit: extern erzeugte zitierfähige Kontext- und Dump-Artefakte.
+- Heimlern: retrospektive Outcome-Auswertung und proposal-only Policy-Vorschläge.
 - Steuerboard: read-only Repo-State-Signal, keine Freigabe.
 - Vibe-Lab: Methoden- und Evidence-Lab.
 - Chronik: Event-Trace und historische Kontinuität.

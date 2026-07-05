@@ -10,6 +10,7 @@ Verdichtete Sicht auf offene Arbeit, Blocker und nächste Schritte.
 - [Mermaidkarte](../../rendered/ecosystem-map.mmd) — lesbare Übersicht.
 - [Registry-Mermaidkarte](../../rendered/ecosystem-registry-map.mmd) — generierte Ansicht aus Knoten und Kanten.
 - [Heim-PC Operatorium Index v0](../../docs/blueprints/heim-pc-operatorium-index-v0.md) — lokale Operatorium-Einordnung.
+- [Cabinet Maintenance Radar v0](../../docs/blueprints/cabinet-maintenance-radar-v0.md) — read-only Wartungs-, Kohärenz- und Lernrückkopplungsgrenze.
 
 ## Laufende Lage
 
