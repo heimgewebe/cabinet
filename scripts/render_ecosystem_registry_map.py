@@ -19,7 +19,8 @@ import re
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Literal
+from types import MappingProxyType
+from typing import Any, Literal, Mapping
 
 DEFAULT_OUTPUT = Path("rendered/ecosystem-registry-map.mmd")
 DEFAULT_VIEW_CONFIG = Path("docs/blueprints/o.json")
@@ -71,7 +72,9 @@ class ProjectionViewConfig:
     visual_anchor_node_ids: tuple[str, ...] = DEFAULT_VISUAL_ANCHOR_NODE_IDS
 
     def title_for(self, kind: str) -> str:
-        titles = self.kind_titles or DEFAULT_KIND_TITLES
+        titles = dict(DEFAULT_KIND_TITLES)
+        if self.kind_titles:
+            titles.update(self.kind_titles)
         return titles.get(kind, kind)
 
 
@@ -86,6 +89,7 @@ class ProjectionRunReport:
     edge_count: int
     stale: bool
     message: str
+    error: object = None
 
     def to_json(self) -> str:
         return json.dumps(
@@ -97,6 +101,7 @@ class ProjectionRunReport:
                 "edge_count": self.edge_count,
                 "stale": self.stale,
                 "message": self.message,
+                "error": self.error,
                 "does_not_establish": [
                     "claim_truth",
                     "runtime_correctness",
@@ -140,16 +145,25 @@ class ProjectionConfigLoader:
     def load(self) -> ProjectionViewConfig:
         path = self._resolve_config_path()
         if not path.is_file():
-            return ProjectionViewConfig(kind_titles=dict(DEFAULT_KIND_TITLES))
+            if path == self._default_config_path():
+                return ProjectionViewConfig()
+            raise RegistryMapError(f"view config file not found: {path}")
+
         doc = load_json(path)
-        raw_config = doc.get("ecosystem_map_v0", {}).get("registry_projection_view", {})
-        if raw_config in ({}, None):
-            return ProjectionViewConfig(kind_titles=dict(DEFAULT_KIND_TITLES))
+        ecosystem_map = doc.get("ecosystem_map_v0", {})
+        if ecosystem_map is None:
+            ecosystem_map = {}
+        if not isinstance(ecosystem_map, dict):
+            raise RegistryMapError("ecosystem_map_v0 must be an object")
+
+        raw_config = ecosystem_map.get("registry_projection_view", {})
+        if raw_config is None or raw_config == {}:
+            return ProjectionViewConfig()
         if not isinstance(raw_config, dict):
             raise RegistryMapError("registry_projection_view must be an object")
         return ProjectionViewConfig(
             kind_order=load_string_tuple(raw_config.get("kind_order"), "registry_projection_view.kind_order", DEFAULT_KIND_ORDER),
-            kind_titles=load_string_dict(raw_config.get("kind_titles"), "registry_projection_view.kind_titles", DEFAULT_KIND_TITLES),
+            kind_titles=load_string_dict(raw_config.get("kind_titles"), "registry_projection_view.kind_titles"),
             visual_anchor_node_ids=load_string_tuple(
                 raw_config.get("visual_anchor_node_ids"),
                 "registry_projection_view.visual_anchor_node_ids",
@@ -165,6 +179,9 @@ class ProjectionConfigLoader:
         except ValueError as exc:
             raise RegistryMapError(f"config path escapes repository: {resolved}") from exc
         return resolved
+
+    def _default_config_path(self) -> Path:
+        return (self.repo_root / DEFAULT_VIEW_CONFIG).resolve()
 
 
 class MermaidRenderer:
@@ -192,20 +209,22 @@ class MermaidRenderer:
 
     def _node_ids(self, nodes: list[dict[str, Any]]) -> dict[str, str]:
         node_ids: dict[str, str] = {}
+        seen_rendered_ids: set[str] = set()
         for index, raw_node in enumerate(nodes, start=1):
             node = validate_node(raw_node, index)
             raw_id = node["id"]
             rendered_id = mermaid_id(raw_id)
-            if rendered_id in node_ids.values():
+            if rendered_id in seen_rendered_ids:
                 raise RegistryMapError(f"node id collision after Mermaid normalization: {raw_id}")
+            seen_rendered_ids.add(rendered_id)
             node_ids[raw_id] = rendered_id
         return node_ids
 
     def _render_nodes(self, nodes: list[dict[str, Any]], node_ids: dict[str, str]) -> list[str]:
         lines: list[str] = []
         nodes_by_kind: dict[str, list[dict[str, Any]]] = defaultdict(list)
-        for node in sorted(nodes, key=lambda item: (str(item.get("kind", "")), str(item.get("id", "")))):
-            nodes_by_kind[str(node.get("kind", "unknown"))].append(node)
+        for node in sorted(nodes, key=lambda item: (item["kind"], item["id"])):
+            nodes_by_kind[node["kind"]].append(node)
 
         for kind in self._ordered_kinds(nodes):
             title = self.config.title_for(kind)
@@ -218,18 +237,18 @@ class MermaidRenderer:
         return lines
 
     def _ordered_kinds(self, nodes: list[dict[str, Any]]) -> list[str]:
-        present = {str(node.get("kind", "unknown")) for node in nodes}
+        present = {node["kind"] for node in nodes}
         ordered = [kind for kind in self.config.kind_order if kind in present]
         extras = sorted(present - set(self.config.kind_order))
         return ordered + extras
 
     def _render_edges(self, edges: list[dict[str, Any]], node_ids: dict[str, str]) -> list[str]:
         lines: list[str] = []
-        for index, raw_edge in enumerate(
-            sorted(edges, key=lambda item: (str(item.get("from", "")), str(item.get("to", "")), str(item.get("type", "")))),
+        validated_edges = [validate_edge(edge, index) for index, edge in enumerate(edges, start=1)]
+        for index, edge in enumerate(
+            sorted(validated_edges, key=lambda item: (item["from"], item["to"], item["type"])),
             start=1,
         ):
-            edge = validate_edge(raw_edge, index)
             source = edge["from"]
             target = edge["to"]
             if source not in node_ids:
@@ -280,9 +299,9 @@ def load_string_tuple(value: Any, label: str, default: tuple[str, ...]) -> tuple
     return tuple(result)
 
 
-def load_string_dict(value: Any, label: str, default: dict[str, str]) -> dict[str, str]:
+def load_string_dict(value: Any, label: str) -> dict[str, str]:
     if value is None:
-        return dict(default)
+        return {}
     if not isinstance(value, dict):
         raise RegistryMapError(f"{label} must be an object")
     result: dict[str, str] = {}
@@ -409,10 +428,31 @@ def check_file(path: Path, expected: str) -> bool:
     return False
 
 
+def report_path(repo_root: Path, path: Path) -> str:
+    try:
+        return path.relative_to(repo_root).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def error_report(mode: Literal["write", "check"], output: str, error: Exception) -> ProjectionRunReport:
+    return ProjectionRunReport(
+        ok=False,
+        mode=mode,
+        output=output,
+        node_count=None,
+        edge_count=None,
+        stale=None,
+        message=f"ERROR: {error}",
+        error=str(error),
+    )
+
+
 def run_projection(repo_root: Path, output: Path, config_path: Path, check: bool) -> ProjectionRunReport:
     registry = RegistryLoader(repo_root).load()
     config = ProjectionConfigLoader(repo_root, config_path).load()
     content = MermaidRenderer(config).render(registry)
+    output_label = report_path(repo_root, output)
     if check:
         ok = check_file(output, content)
         message = (
@@ -423,7 +463,7 @@ def run_projection(repo_root: Path, output: Path, config_path: Path, check: bool
         return ProjectionRunReport(
             ok=ok,
             mode="check",
-            output=str(output),
+            output=output_label,
             node_count=len(registry.nodes),
             edge_count=len(registry.edges),
             stale=not ok,
@@ -433,7 +473,7 @@ def run_projection(repo_root: Path, output: Path, config_path: Path, check: bool
     return ProjectionRunReport(
         ok=True,
         mode="write",
-        output=str(output),
+        output=output_label,
         node_count=len(registry.nodes),
         edge_count=len(registry.edges),
         stale=False,
@@ -455,9 +495,12 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     repo_root = Path(args.repo_root).resolve()
+    mode: Literal["write", "check"] = "check" if args.check else "write"
     report_format = "json" if args.json else args.format
+    output_label = str(args.output)
     try:
         output = resolve_output(repo_root, args.output)
+        output_label = report_path(repo_root, output)
         config_path = Path(args.view_config)
         report = run_projection(repo_root, output, config_path, bool(args.check))
         if report_format == "json":
@@ -466,21 +509,11 @@ def main(argv: list[str] | None = None) -> int:
             print(report.message)
         return 0 if report.ok else 1
     except (RegistryMapError, OSError, UnicodeError) as exc:
+        report = error_report(mode, output_label, exc)
         if report_format == "json":
-            print(
-                json.dumps(
-                    {
-                        "ok": False,
-                        "error": str(exc),
-                        "mode": "check" if args.check else "write",
-                        "output": str(args.output),
-                    },
-                    ensure_ascii=False,
-                    sort_keys=True,
-                )
-            )
+            print(report.to_json(), end="")
         else:
-            print(f"ERROR: {exc}", file=sys.stderr)
+            print(report.message, file=sys.stderr)
         return 2
 
 

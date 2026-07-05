@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from contextlib import redirect_stderr, redirect_stdout
+from io import StringIO
+import json
 import sys
 import tempfile
 import unittest
@@ -105,17 +108,20 @@ class EcosystemRegistryMapRenderTests(unittest.TestCase):
     def test_output_path_may_not_escape_repository(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             outside = Path(temporary) / "ecosystem-registry-map.mmd"
-            self.assertEqual(
-                render_main(
+            stdout = StringIO()
+            stderr = StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                result = render_main(
                     [
                         "--repo-root",
                         str(ROOT),
                         "--output",
                         str(outside),
                     ]
-                ),
-                2,
-            )
+                )
+            self.assertEqual(result, 2)
+            self.assertEqual(stdout.getvalue(), "")
+            self.assertIn("output path escapes repository", stderr.getvalue())
 
     def test_render_mermaid_includes_registry_ids_in_node_labels(self) -> None:
         nodes = [
@@ -262,7 +268,99 @@ class EcosystemRegistryMapRenderTests(unittest.TestCase):
         self.assertIn('"merge_readiness"', text)
 
     def test_json_flag_returns_success_report(self) -> None:
-        self.assertEqual(render_main(["--repo-root", str(ROOT), "--check", "--json"]), 0)
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            result = render_main(["--repo-root", str(ROOT), "--check", "--json"])
+        self.assertEqual(result, 0)
+        report = json.loads(stdout.getvalue())
+        self.assertTrue(report["ok"])
+        self.assertEqual(report["output"], "rendered/ecosystem-registry-map.mmd")
+        self.assertFalse(report["stale"])
+        self.assertIsNone(report["error"])
+
+    def test_render_mermaid_rejects_non_object_edges_before_sorting(self) -> None:
+        nodes = [
+            {
+                "id": "repo:cabinet",
+                "kind": "repository",
+                "label": "Cabinet",
+                "status": "active",
+            }
+        ]
+        with self.assertRaisesRegex(RegistryMapError, "edge 1 must be an object"):
+            render_mermaid(nodes, ["not-an-edge"])
+
+    def test_partial_kind_title_override_preserves_default_titles(self) -> None:
+        config = ProjectionViewConfig(kind_titles={"agent": "Agent Surface"})
+        self.assertEqual(config.title_for("agent"), "Agent Surface")
+        self.assertEqual(config.title_for("repository"), "Repos und Organe")
+
+    def test_json_error_report_for_malformed_ecosystem_map_v0_is_stable(self) -> None:
+        with tempfile.TemporaryDirectory(dir=ROOT / "scripts/tests") as temporary:
+            config = Path(temporary) / "bad-config.json"
+            config.write_text('{"ecosystem_map_v0": "bad"}', encoding="utf-8")
+            stdout = StringIO()
+            stderr = StringIO()
+            with redirect_stdout(stdout), redirect_stderr(stderr):
+                result = render_main(
+                    [
+                        "--repo-root",
+                        str(ROOT),
+                        "--check",
+                        "--json",
+                        "--view-config",
+                        str(config.relative_to(ROOT)),
+                    ]
+                )
+            self.assertEqual(result, 2)
+            self.assertEqual(stderr.getvalue(), "")
+            report = json.loads(stdout.getvalue())
+            self.assertFalse(report["ok"])
+            self.assertEqual(report["output"], "rendered/ecosystem-registry-map.mmd")
+            self.assertIsNone(report["node_count"])
+            self.assertIsNone(report["edge_count"])
+            self.assertIsNone(report["stale"])
+            self.assertEqual(report["error"], "ecosystem_map_v0 must be an object")
+            self.assertIn("claim_truth", report["does_not_establish"])
+
+    def test_json_error_report_for_malformed_registry_projection_view_is_stable(self) -> None:
+        with tempfile.TemporaryDirectory(dir=ROOT / "scripts/tests") as temporary:
+            config = Path(temporary) / "bad-view.json"
+            config.write_text('{"ecosystem_map_v0": {"registry_projection_view": "bad"}}', encoding="utf-8")
+            stdout = StringIO()
+            with redirect_stdout(stdout), redirect_stderr(StringIO()):
+                result = render_main(
+                    [
+                        "--repo-root",
+                        str(ROOT),
+                        "--check",
+                        "--json",
+                        "--view-config",
+                        str(config.relative_to(ROOT)),
+                    ]
+                )
+            self.assertEqual(result, 2)
+            report = json.loads(stdout.getvalue())
+            self.assertEqual(report["error"], "registry_projection_view must be an object")
+            self.assertIn("merge_readiness", report["does_not_establish"])
+
+    def test_explicit_missing_view_config_fails_closed(self) -> None:
+        stdout = StringIO()
+        missing = "scripts/tests/missing-view-config.json"
+        with redirect_stdout(stdout), redirect_stderr(StringIO()):
+            result = render_main(
+                [
+                    "--repo-root",
+                    str(ROOT),
+                    "--check",
+                    "--json",
+                    "--view-config",
+                    missing,
+                ]
+            )
+        self.assertEqual(result, 2)
+        report = json.loads(stdout.getvalue())
+        self.assertIn("view config file not found", report["error"])
 
 
 if __name__ == "__main__":
