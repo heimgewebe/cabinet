@@ -6,12 +6,20 @@ on:
       - main
     paths:
       - registry/ecosystem/**
+      - docs/contracts/cabinet-bridge-artifact-manifest-v1.md
+      - docs/contracts/cabinet-bridge-artifact-manifest-v1.schema.json
+      - scripts/write_bridge_artifact_manifest.py
+      - scripts/tests/test_bridge_artifact_manifest.py
       - .github/workflows/cabinet-bridge-probe.yml
   pull_request:
     branches:
       - main
     paths:
       - registry/ecosystem/**
+      - docs/contracts/cabinet-bridge-artifact-manifest-v1.md
+      - docs/contracts/cabinet-bridge-artifact-manifest-v1.schema.json
+      - scripts/write_bridge_artifact_manifest.py
+      - scripts/tests/test_bridge_artifact_manifest.py
       - .github/workflows/cabinet-bridge-probe.yml
   workflow_dispatch:
 
