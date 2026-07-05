@@ -15,6 +15,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
+CONTRACT_VERSION = "1"
+CONTRACT_PATH = "docs/contracts/cabinet-bridge-artifact-manifest-v1.md"
+SCHEMA_PATH = "docs/contracts/cabinet-bridge-artifact-manifest-v1.schema.json"
+
 ARTIFACT_SPECS: tuple[dict[str, str], ...] = (
     {
         "path": "bridge-import-policy-review.json",
@@ -84,6 +88,9 @@ def validate_and_build_manifest(root: Path, bureau_ref: str) -> dict[str, Any]:
     return {
         "schemaVersion": 1,
         "kind": MANIFEST_KIND,
+        "contractVersion": CONTRACT_VERSION,
+        "contractPath": CONTRACT_PATH,
+        "schemaPath": SCHEMA_PATH,
         "mode": "evidence_only",
         "bureauRef": bureau_ref,
         "artifactCount": len(ARTIFACT_SPECS),
