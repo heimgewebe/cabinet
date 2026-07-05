@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://heimgewebe.local/cabinet/contracts/cabinet-bridge-artifact-manifest-v1.schema.json",
+  "title": "Cabinet Bridge Artifact Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "mode",
+    "bureauRef",
+    "artifactCount",
+    "artifacts",
+    "effectFlags"
+  ],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "kind": {"const": "cabinet_bridge_artifact_manifest"},
+    "mode": {"const": "evidence_only"},
+    "bureauRef": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "artifactCount": {"const": 6},
+    "artifacts": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "prefixItems": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "kind"],
+          "properties": {
+            "path": {"const": "bridge-import-policy-review.json"},
+            "kind": {"const": "bureau.cabinet_bridge_import_review_contract_policy_review"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "kind"],
+          "properties": {
+            "path": {"const": "bridge-probe-report.json"},
+            "kind": {"const": "cabinet_bureau_bridge_probe"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "kind"],
+          "properties": {
+            "path": {"const": "bridge-probe-summary.md"},
+            "kind": {"const": "markdown_summary"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "kind"],
+          "properties": {
+            "path": {"const": "bridge-preview.json"},
+            "kind": {"const": "cabinet_bridge_promotion_preview"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "kind"],
+          "properties": {
+            "path": {"const": "bridge-review.json"},
+            "kind": {"const": "cabinet_bridge_preview_review_gate"}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "kind"],
+          "properties": {
+            "path": {"const": "bridge-receipt.json"},
+            "kind": {"const": "cabinet_bridge_review_receipt"}
+          }
+        }
+      ]
+    },
+    "effectFlags": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "importAllowed",
+        "dispatchAllowed",
+        "queueMutationAllowed",
+        "taskCreationAllowed"
+      ],
+      "properties": {
+        "importAllowed": {"const": false},
+        "dispatchAllowed": {"const": false},
+        "queueMutationAllowed": {"const": false},
+        "taskCreationAllowed": {"const": false}
+      }
+    }
+  }
+}
