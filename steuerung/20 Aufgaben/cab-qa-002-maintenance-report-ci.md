@@ -14,7 +14,7 @@ CAB-QA-001 hat den Report-Producer, Contract und Testkern angelegt. Ohne CI-Lauf
 
 ## Antithese
 
-Der CI-Lauf darf nicht zur verdeckten Operativschicht werden. Ein Report darf keine Aufgaben, keine Agentenstarts und keine Runtime-Aenderungen ausloesen.
+Der CI-Lauf darf nicht zur verdeckten Operativschicht werden. Ein Report darf keine Aufgaben, keine Agentenstarts und keine Systemaenderungen ausloesen.
 
 ## Synthese
 
@@ -25,7 +25,7 @@ CAB-QA-002 fuehrt den Report automatisch als Check aus, validiert seine JSON-For
 - Workflow-Pfade fuer Maintenance-Report-Inputs erweitern.
 - `test_cabinet_maintenance_report.py` im Radar-Workflow ausfuehren.
 - `scripts/write_cabinet_maintenance_report.py --check --json` ausfuehren.
-- Einen Report nach `${RUNNER_TEMP}/cabinet-maintenance-report.json` schreiben.
+- Einen Report nach `.tmp/cabinet-maintenance-report.json` schreiben.
 - JSON-Form mit `python3 -m json.tool` pruefen.
 - Summary- und Statusartefakte hochladen.
 
@@ -34,15 +34,13 @@ CAB-QA-002 fuehrt den Report automatisch als Check aus, validiert seine JSON-For
 - Keine RepoBrief-/Lenskit-Dump-Erzeugung.
 - Keine Bureau-Task-Erzeugung.
 - Keine Agenten-Delegation.
-- Keine Merge-, Push-, Cleanup- oder Runtime-Wirkung.
+- Keine Merge-, Push- oder Cleanup-Wirkung.
 
 ## Target-Proof
 
-```bash
-python3 -m unittest discover -s scripts/tests -p 'test_cabinet_maintenance_report.py'
-python3 scripts/write_cabinet_maintenance_report.py --check --json
-python3 scripts/write_cabinet_maintenance_report.py --output "$RUNNER_TEMP/cabinet-maintenance-report.json" --json
-```
+- `python3 -m unittest discover -s scripts/tests -p 'test_cabinet_maintenance_report.py'`
+- `python3 scripts/write_cabinet_maintenance_report.py --check --json`
+- `python3 scripts/write_cabinet_maintenance_report.py --output .tmp/cabinet-maintenance-report.json --json`
 
 ## Epistemische Leere
 
