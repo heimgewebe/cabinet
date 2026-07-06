@@ -1,6 +1,6 @@
 # CAB-QA-004 — Externe Manifestreferenzen beobachten
 
-Status: open
+Status: blocked — no valid external manifest observed
 Datum: 2026-07-05
 Organfuehrung: Cabinet -> RepoBrief/Lenskit
 
@@ -40,4 +40,12 @@ Stop, wenn kein aktuelles externes Manifest belegbar ist, ein Pfad nicht zum Con
 
 ## Epistemische Leere
 
-Aktuelle externe Manifestreferenzen fehlen. Noetig fuer Freshness-Scan ueber konkrete RepoBrief-/Lenskit-Dumps.
+Aktuelle externe Manifestreferenzen fehlen weiterhin. Noetig fuer Freshness-Scan ueber konkrete RepoBrief-/Lenskit-Dumps. Beobachtung 2026-07-06 dokumentiert die Leerstelle ohne Registry-Mutation.
+
+## Beobachtung 2026-07-06
+
+Ergebnis: Stop, keine Registry-Aktualisierung.
+
+Begruendung: Im Cabinet-Repo existiert kein `external/`-Manifestpfad. In `/home/alex/repos/merges` wurden fuer Cabinet nur alte `*_merge.output_health.json`-Sidecars und Source-Card-Verzeichnisse gesehen, aber kein aktuelles `*_merge.bundle.manifest.json` oder `*_merge.agent_entry_manifest.json`. iCloud-Manifesttreffer waren nicht als Cabinet-RepoBrief-/Lenskit-Dumpmanifest belegbar.
+
+Befund: `pruefung/30 Befunde/cab-qa-004-external-manifest-observation-2026-07-06.md`
