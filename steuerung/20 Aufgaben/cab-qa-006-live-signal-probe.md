@@ -26,7 +26,7 @@ Dieser Slice erzeugt nur ein read-only JSONL-Probe-Artefakt und validiert es mit
 ## Beleg
 
 - `pruefung/10 Laeufe/cab-qa-006-live-signal-probe.jsonl`
-- `scripts/validate_ecosystem_signals.py --input pruefung/10 Laeufe/cab-qa-006-live-signal-probe.jsonl --json`
+- `python3 scripts/validate_ecosystem_signals.py --input 'pruefung/10 Laeufe/cab-qa-006-live-signal-probe.jsonl' --json`
 
 ## Nicht-Ziele
 
