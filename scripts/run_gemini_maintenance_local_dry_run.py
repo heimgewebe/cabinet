@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 from datetime import datetime, timezone
+import io
 import json
 from pathlib import Path
 import shutil
@@ -128,6 +130,12 @@ This artifact does not approve a schedule, create a task, create an issue, creat
     )
 
 
+def _run_extractor(arguments: list[str]) -> int:
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        return extract_main(arguments)
+
+
 def run_local_dry_run(
     *,
     repo_root: Path,
@@ -175,7 +183,7 @@ def run_local_dry_run(
         rc = result.returncode
         status = "gemini_executed"
 
-    extract_rc = extract_main([
+    extract_rc = _run_extractor([
         "--summary-input",
         str(summary_output),
         "--error-input",
