@@ -78,32 +78,14 @@ FORBIDDEN_PATH_PREFIXES = (
     ".messages/",
     "logs/",
 )
-
-FORBIDDEN_FILE_NAMES = (
-    ".env",
-    ".cabinet.env",
-    ".cabinet.db",
-    "daemon-token",
-    "runtime.env",
-)
-
-FORBIDDEN_FILE_SUFFIXES = (
-    ".key",
-    ".pem",
-    ".p12",
-    ".pfx",
-    ".sqlite",
-    ".sqlite3",
-    ".db",
-    ".log",
-)
-
-PRIVATE_KEY_MARKERS = (
-    "-----BEGIN PRIVATE KEY-----",
-    "-----BEGIN RSA PRIVATE KEY-----",
-    "-----BEGIN OPENSSH PRIVATE KEY-----",
-    "-----BEGIN EC PRIVATE KEY-----",
-)
+FORBIDDEN_FILE_NAMES = (".env", ".cabinet.env", ".cabinet.db", "daemon-token", "runtime.env")
+FORBIDDEN_FILE_SUFFIXES = (".key", ".pem", ".p12", ".pfx", ".sqlite", ".sqlite3", ".db", ".log")
+PRIVATE_KEY_MARKERS = tuple("-----BEGIN " + label + "-----" for label in (
+    "PRIVATE KEY",
+    "RSA PRIVATE KEY",
+    "OPENSSH PRIVATE KEY",
+    "EC PRIVATE KEY",
+))
 
 TOP_LEVEL_FIELDS = {
     "schemaVersion",
@@ -121,7 +103,6 @@ TOP_LEVEL_FIELDS = {
     "exclusionReport",
     "doesNotEstablish",
 }
-
 ENTRY_FIELDS = {"ref", "path", "role", "mediaType", "sha256", "bytes", "lines", "content"}
 
 
@@ -135,6 +116,10 @@ def _sha256_text(text: str) -> str:
 
 def _sha256_json(value: Any) -> str:
     return _sha256_text(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
+
+
+def _is_commit_sha(value: object) -> bool:
+    return isinstance(value, str) and len(value) == 40 and all(ch in "0123456789abcdef" for ch in value)
 
 
 def _generated_at() -> str:
@@ -169,8 +154,26 @@ def _git_commit(repo_root: Path) -> str:
     return commit
 
 
-def _is_commit_sha(value: object) -> bool:
-    return isinstance(value, str) and len(value) == 40 and all(ch in "0123456789abcdef" for ch in value)
+def _normalized_slash(path: str) -> str:
+    return path.replace("\\", "/")
+
+
+def _assert_path_not_forbidden(relative_path: str) -> None:
+    normalized = _normalized_slash(relative_path).lstrip("/")
+    lowered = normalized.lower()
+    parts = tuple(part.lower() for part in normalized.split("/"))
+    for prefix in FORBIDDEN_PATH_PREFIXES:
+        if lowered == prefix.rstrip("/") or lowered.startswith(prefix):
+            raise EvidencePacketError(f"forbidden curated input path: {relative_path}")
+    if any(part in {name.lower() for name in FORBIDDEN_FILE_NAMES} for part in parts):
+        raise EvidencePacketError(f"forbidden curated input file name: {relative_path}")
+    if any(lowered.endswith(suffix) for suffix in FORBIDDEN_FILE_SUFFIXES):
+        raise EvidencePacketError(f"forbidden curated input file suffix: {relative_path}")
+
+
+def _assert_content_not_forbidden(content: str, relative_path: str) -> None:
+    if any(marker in content for marker in PRIVATE_KEY_MARKERS):
+        raise EvidencePacketError(f"private key marker found in curated input: {relative_path}")
 
 
 def _repo_path(repo_root: Path, relative_path: str) -> Path:
@@ -195,34 +198,13 @@ def _repo_path(repo_root: Path, relative_path: str) -> Path:
     return resolved
 
 
-def _normalized_slash(path: str) -> str:
-    return path.replace("\\", "/")
-
-
-def _assert_path_not_forbidden(relative_path: str) -> None:
-    normalized = _normalized_slash(relative_path).lstrip("/")
-    lowered = normalized.lower()
-    parts = tuple(part.lower() for part in normalized.split("/"))
-    for prefix in FORBIDDEN_PATH_PREFIXES:
-        if lowered == prefix.rstrip("/") or lowered.startswith(prefix):
-            raise EvidencePacketError(f"forbidden curated input path: {relative_path}")
-    if any(part in {name.lower() for name in FORBIDDEN_FILE_NAMES} for part in parts):
-        raise EvidencePacketError(f"forbidden curated input file name: {relative_path}")
-    if any(lowered.endswith(suffix) for suffix in FORBIDDEN_FILE_SUFFIXES):
-        raise EvidencePacketError(f"forbidden curated input file suffix: {relative_path}")
-
-
-def _assert_content_not_forbidden(content: str, relative_path: str) -> None:
-    if any(marker in content for marker in PRIVATE_KEY_MARKERS):
-        raise EvidencePacketError(f"private key marker found in curated input: {relative_path}")
-
-
 def _line_count(content: str) -> int:
     return len(content.splitlines())
 
 
 def _entry(ref: str, path: str, role: str, media_type: str, content: str) -> dict[str, Any]:
-    _assert_path_not_forbidden(path) if not path.startswith("generated/") else None
+    if not path.startswith("generated/"):
+        _assert_path_not_forbidden(path)
     _assert_content_not_forbidden(content, path)
     encoded = content.encode("utf-8")
     return {
@@ -239,33 +221,20 @@ def _entry(ref: str, path: str, role: str, media_type: str, content: str) -> dic
 
 def _source_entry(repo_root: Path, relative_path: str, role: str, media_type: str) -> dict[str, Any]:
     path = _repo_path(repo_root, relative_path)
-    content = path.read_text(encoding="utf-8")
-    return _entry(f"evidence:{relative_path}", relative_path, role, media_type, content)
+    return _entry(f"evidence:{relative_path}", relative_path, role, media_type, path.read_text(encoding="utf-8"))
 
 
 def _manifest_digest(entries: list[dict[str, Any]], maintenance_report: dict[str, Any]) -> str:
     return _sha256_json({
         "entries": [
-            {
-                "ref": entry["ref"],
-                "path": entry["path"],
-                "role": entry["role"],
-                "sha256": entry["sha256"],
-                "bytes": entry["bytes"],
-                "lines": entry["lines"],
-            }
+            {key: entry[key] for key in ("ref", "path", "role", "sha256", "bytes", "lines")}
             for entry in entries
         ],
         "maintenanceReportSummary": maintenance_report.get("summary"),
     })
 
 
-def build_packet(
-    repo_root: Path,
-    *,
-    source_commit: str | None = None,
-    generated_at: str | None = None,
-) -> dict[str, Any]:
+def build_packet(repo_root: Path, *, source_commit: str | None = None, generated_at: str | None = None) -> dict[str, Any]:
     repo_root = repo_root.resolve()
     commit = source_commit or _git_commit(repo_root)
     if not _is_commit_sha(commit):
@@ -284,18 +253,11 @@ def build_packet(
     except MaintenanceReportError as exc:
         raise EvidencePacketError(f"could not build maintenance report for packet: {exc}") from exc
     report_content = json.dumps(report, indent=2, ensure_ascii=False, sort_keys=True) + "\n"
-    entries.append(_entry(
-        MAINTENANCE_REPORT_REF,
-        MAINTENANCE_REPORT_PATH,
-        "generated_maintenance_report",
-        "application/json",
-        report_content,
-    ))
+    entries.append(_entry(MAINTENANCE_REPORT_REF, MAINTENANCE_REPORT_PATH, "generated_maintenance_report", "application/json", report_content))
     entries.sort(key=lambda item: item["ref"])
 
     source_file_entries = [entry for entry in entries if not entry["path"].startswith("generated/")]
     generated_entries = [entry for entry in entries if entry["path"].startswith("generated/")]
-    digest = _manifest_digest(entries, report)
     packet = {
         "schemaVersion": 1,
         "kind": KIND,
@@ -323,7 +285,7 @@ def build_packet(
             "sourceFileCount": len(source_file_entries),
             "generatedEntryCount": len(generated_entries),
             "totalBytes": sum(entry["bytes"] for entry in entries),
-            "manifestSha256": digest,
+            "manifestSha256": _manifest_digest(entries, report),
             "maintenanceReportStatus": report["summary"]["status"],
             "maintenanceReportFindingCount": report["summary"]["findingCount"],
         },
@@ -355,10 +317,8 @@ def validate_packet(packet: dict[str, Any]) -> None:
         raise EvidencePacketError("packet top-level fields mismatch")
     if packet["schemaVersion"] != 1 or packet["kind"] != KIND:
         raise EvidencePacketError("packet identity mismatch")
-    if packet["contractVersion"] != CONTRACT_VERSION:
-        raise EvidencePacketError("packet contractVersion mismatch")
-    if packet["contractPath"] != CONTRACT_PATH or packet["schemaPath"] != SCHEMA_PATH:
-        raise EvidencePacketError("packet contract paths mismatch")
+    if packet["contractVersion"] != CONTRACT_VERSION or packet["contractPath"] != CONTRACT_PATH or packet["schemaPath"] != SCHEMA_PATH:
+        raise EvidencePacketError("packet contract mismatch")
     if packet["generator"] != GENERATOR_PATH:
         raise EvidencePacketError("packet generator mismatch")
 
@@ -371,82 +331,64 @@ def validate_packet(packet: dict[str, Any]) -> None:
     if source["mode"] != "curated_allowlist_only":
         raise EvidencePacketError("source mode mismatch")
 
-    input_policy = _object(packet["inputPolicy"], "inputPolicy")
-    expected_policy_fields = {
-        "mode",
-        "allowedRepoPaths",
-        "generatedRefs",
-        "forbiddenPathPrefixes",
-        "forbiddenFileNames",
-        "forbiddenFileSuffixes",
-        "fullRepositoryCrawlAllowed",
-    }
-    if set(input_policy) != expected_policy_fields or input_policy["mode"] != "curated_allowlist_only":
-        raise EvidencePacketError("inputPolicy mismatch")
+    policy = _object(packet["inputPolicy"], "inputPolicy")
     expected_paths = [path for path, _role, _media_type in CURATED_INPUTS]
-    if input_policy["allowedRepoPaths"] != expected_paths:
-        raise EvidencePacketError("inputPolicy allowedRepoPaths mismatch")
-    if input_policy["generatedRefs"] != [MAINTENANCE_REPORT_REF]:
-        raise EvidencePacketError("inputPolicy generatedRefs mismatch")
-    if input_policy["forbiddenPathPrefixes"] != list(FORBIDDEN_PATH_PREFIXES):
+    if policy.get("mode") != "curated_allowlist_only" or policy.get("allowedRepoPaths") != expected_paths:
+        raise EvidencePacketError("inputPolicy allowed inputs mismatch")
+    if policy.get("generatedRefs") != [MAINTENANCE_REPORT_REF] or policy.get("fullRepositoryCrawlAllowed") is not False:
+        raise EvidencePacketError("inputPolicy generated/full-crawl mismatch")
+    if policy.get("forbiddenPathPrefixes") != list(FORBIDDEN_PATH_PREFIXES):
         raise EvidencePacketError("inputPolicy forbiddenPathPrefixes mismatch")
-    if input_policy["forbiddenFileNames"] != list(FORBIDDEN_FILE_NAMES):
+    if policy.get("forbiddenFileNames") != list(FORBIDDEN_FILE_NAMES):
         raise EvidencePacketError("inputPolicy forbiddenFileNames mismatch")
-    if input_policy["forbiddenFileSuffixes"] != list(FORBIDDEN_FILE_SUFFIXES):
+    if policy.get("forbiddenFileSuffixes") != list(FORBIDDEN_FILE_SUFFIXES):
         raise EvidencePacketError("inputPolicy forbiddenFileSuffixes mismatch")
-    if input_policy["fullRepositoryCrawlAllowed"] is not False:
-        raise EvidencePacketError("fullRepositoryCrawlAllowed must be false")
 
     entries = packet["entries"]
     if not isinstance(entries, list) or len(entries) != len(CURATED_INPUTS) + 1:
         raise EvidencePacketError("entries length mismatch")
+    expected_by_ref = {
+        f"evidence:{path}": (path, role, media_type)
+        for path, role, media_type in CURATED_INPUTS
+    }
+    expected_by_ref[MAINTENANCE_REPORT_REF] = (
+        MAINTENANCE_REPORT_PATH,
+        "generated_maintenance_report",
+        "application/json",
+    )
     refs = [entry.get("ref") if isinstance(entry, dict) else None for entry in entries]
-    if len(refs) != len(set(refs)):
-        raise EvidencePacketError("entry refs must be unique")
-    expected_refs = {f"evidence:{path}" for path, _role, _media_type in CURATED_INPUTS} | {MAINTENANCE_REPORT_REF}
-    if set(refs) != expected_refs:
+    if set(refs) != set(expected_by_ref) or len(refs) != len(set(refs)):
         raise EvidencePacketError("entry refs mismatch")
     for entry in entries:
         _validate_entry(entry)
+        expected = expected_by_ref[entry["ref"]]
+        if (entry["path"], entry["role"], entry["mediaType"]) != expected:
+            raise EvidencePacketError(f"entry binding mismatch: {entry['ref']}")
 
-    report_meta = _object(packet["maintenanceReport"], "maintenanceReport")
-    if set(report_meta) != {"ref", "path", "kind", "sha256", "summary"}:
-        raise EvidencePacketError("maintenanceReport fields mismatch")
-    if report_meta["ref"] != MAINTENANCE_REPORT_REF or report_meta["path"] != MAINTENANCE_REPORT_PATH:
-        raise EvidencePacketError("maintenanceReport ref/path mismatch")
     report_entry = next(entry for entry in entries if entry["ref"] == MAINTENANCE_REPORT_REF)
-    if report_meta["sha256"] != report_entry["sha256"]:
+    report_meta = _object(packet["maintenanceReport"], "maintenanceReport")
+    if report_meta.get("ref") != MAINTENANCE_REPORT_REF or report_meta.get("path") != MAINTENANCE_REPORT_PATH:
+        raise EvidencePacketError("maintenanceReport ref/path mismatch")
+    if report_meta.get("sha256") != report_entry["sha256"]:
         raise EvidencePacketError("maintenanceReport sha mismatch")
     try:
         report_payload = json.loads(report_entry["content"])
     except json.JSONDecodeError as exc:
         raise EvidencePacketError("maintenance report entry must contain JSON") from exc
-    if report_meta["kind"] != "cabinet_maintenance_report" or report_payload.get("kind") != report_meta["kind"]:
+    if report_meta.get("kind") != "cabinet_maintenance_report" or report_payload.get("kind") != report_meta.get("kind"):
         raise EvidencePacketError("maintenanceReport kind mismatch")
-    if report_meta["summary"] != report_payload.get("summary"):
+    if report_meta.get("summary") != report_payload.get("summary"):
         raise EvidencePacketError("maintenanceReport summary mismatch")
 
     summary = _object(packet["summary"], "summary")
-    expected_summary_fields = {
-        "entryCount",
-        "sourceFileCount",
-        "generatedEntryCount",
-        "totalBytes",
-        "manifestSha256",
-        "maintenanceReportStatus",
-        "maintenanceReportFindingCount",
-    }
-    if set(summary) != expected_summary_fields:
-        raise EvidencePacketError("summary fields mismatch")
     source_entries = [entry for entry in entries if not entry["path"].startswith("generated/")]
     generated_entries = [entry for entry in entries if entry["path"].startswith("generated/")]
-    expected_digest = _manifest_digest(entries, report_payload)
     expected_summary = {
         "entryCount": len(entries),
         "sourceFileCount": len(source_entries),
         "generatedEntryCount": len(generated_entries),
         "totalBytes": sum(entry["bytes"] for entry in entries),
-        "manifestSha256": expected_digest,
+        "manifestSha256": _manifest_digest(entries, report_payload),
         "maintenanceReportStatus": report_payload["summary"]["status"],
         "maintenanceReportFindingCount": report_payload["summary"]["findingCount"],
     }
@@ -456,7 +398,6 @@ def validate_packet(packet: dict[str, Any]) -> None:
     flags = _object(packet["effectFlags"], "effectFlags")
     if set(flags) != set(EFFECT_FLAGS) or any(flags[flag] is not False for flag in EFFECT_FLAGS):
         raise EvidencePacketError("all effectFlags must exist and be false")
-    exclusion = _object(packet["exclusionReport"], "exclusionReport")
     expected_exclusion = {
         "forbiddenPathHits": [],
         "privateKeyMarkerHits": [],
@@ -465,7 +406,7 @@ def validate_packet(packet: dict[str, Any]) -> None:
         "privateLogsIncluded": False,
         "agentRuntimeIncluded": False,
     }
-    if exclusion != expected_exclusion:
+    if packet["exclusionReport"] != expected_exclusion:
         raise EvidencePacketError("exclusionReport must be clean and effect-free")
     non_claims = packet["doesNotEstablish"]
     if not isinstance(non_claims, list) or set(non_claims) != set(DOES_NOT_ESTABLISH) or len(non_claims) != len(DOES_NOT_ESTABLISH):
@@ -477,10 +418,9 @@ def _validate_entry(entry: Any) -> None:
         raise EvidencePacketError("entry fields mismatch")
     for field in ("ref", "path", "role", "mediaType", "content"):
         _string(entry[field], f"entry.{field}")
-    path = entry["path"]
-    if not path.startswith("generated/"):
-        _assert_path_not_forbidden(path)
-    _assert_content_not_forbidden(entry["content"], path)
+    if not entry["path"].startswith("generated/"):
+        _assert_path_not_forbidden(entry["path"])
+    _assert_content_not_forbidden(entry["content"], entry["path"])
     encoded = entry["content"].encode("utf-8")
     if entry["sha256"] != hashlib.sha256(encoded).hexdigest():
         raise EvidencePacketError(f"entry sha mismatch: {entry['ref']}")
@@ -502,16 +442,20 @@ def _string(value: Any, label: str) -> str:
     return value
 
 
-def write_packet(repo_root: Path, output: Path) -> dict[str, Any]:
+def _write_packet(repo_root: Path, output: Path, packet: dict[str, Any]) -> None:
     repo_root = repo_root.resolve()
     target = output if output.is_absolute() else repo_root / output
     try:
         target.resolve().relative_to(repo_root)
     except ValueError as exc:
         raise EvidencePacketError(f"output escapes repository: {output}") from exc
-    packet = build_packet(repo_root)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(packet, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def write_packet(repo_root: Path, output: Path) -> dict[str, Any]:
+    packet = build_packet(repo_root.resolve())
+    _write_packet(repo_root, output, packet)
     return packet
 
 
@@ -549,25 +493,11 @@ def main(argv: list[str] | None = None) -> int:
         else:
             repo_root = Path(args.repo_root).resolve()
             if args.check:
-                packet = build_packet(
-                    repo_root,
-                    source_commit=args.source_commit,
-                    generated_at=args.generated_at,
-                )
+                packet = build_packet(repo_root, source_commit=args.source_commit, generated_at=args.generated_at)
                 action = "check"
             else:
-                if args.source_commit or args.generated_at:
-                    packet = build_packet(
-                        repo_root,
-                        source_commit=args.source_commit,
-                        generated_at=args.generated_at,
-                    )
-                    target = Path(args.output)
-                    target = target if target.is_absolute() else repo_root / target
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    target.write_text(json.dumps(packet, indent=2, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
-                else:
-                    packet = write_packet(repo_root, Path(args.output))
+                packet = build_packet(repo_root, source_commit=args.source_commit, generated_at=args.generated_at)
+                _write_packet(repo_root, Path(args.output), packet)
                 action = "write"
     except EvidencePacketError as exc:
         if args.json:
