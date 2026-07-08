@@ -50,14 +50,16 @@ The command:
 2. writes the exact prompt used for the run,
 3. invokes local `gemini` with the personal login,
 4. stores raw Gemini stdout/stderr,
-5. extracts and validates `gemini-maintenance-dry-run-scan.json`,
-6. writes a review scaffold.
+5. unwraps Gemini CLI JSON output when stdout contains a `response` field,
+6. extracts and validates `gemini-maintenance-dry-run-scan.json`,
+7. writes a review scaffold.
 
 ### Local expected artifacts
 
 The local path writes:
 
 - `pruefung/10 Laeufe/gemini-maintenance-evidence-packet-v1.json`
+- `pruefung/10 Laeufe/gemini-maintenance-dry-run-gemini-wrapper.json`
 - `pruefung/10 Laeufe/gemini-maintenance-dry-run-gemini-summary.txt`
 - `pruefung/10 Laeufe/gemini-maintenance-dry-run-gemini-error.txt`
 - `pruefung/10 Laeufe/gemini-maintenance-dry-run-raw-output.json`
