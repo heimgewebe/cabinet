@@ -28,3 +28,4 @@ Die Mermaidkarten sind Orientierung und Driftfläche, kein Beweis für Claim-Wah
 - Für laufende Dienste gelten Runtime, systemd, Logs und Healthchecks.
 - Für Freigabe, Priorität und Abbruch gilt die menschliche Entscheidung.
 - Cabinet besitzt die Kartensemantik, nicht die Wahrheit aller Quellen.
+- Gemini ist derzeit nur vorgeschlagene proposal-only Kapazität und vor Capability-/Sandbox-Preflight nicht einplanbar/schedulable.
