@@ -24,6 +24,7 @@ SCAN_OUTPUT_NAME = "gemini-maintenance-dry-run-scan.json"
 REVIEW_OUTPUT_NAME = "gemini-maintenance-dry-run-review.md"
 SUMMARY_OUTPUT_NAME = "gemini-maintenance-dry-run-gemini-summary.txt"
 ERROR_OUTPUT_NAME = "gemini-maintenance-dry-run-gemini-error.txt"
+WRAPPER_OUTPUT_NAME = "gemini-maintenance-dry-run-gemini-wrapper.json"
 PROMPT_OUTPUT_NAME = "gemini-maintenance-dry-run-prompt.md"
 
 
@@ -60,6 +61,20 @@ def _require_gemini(gemini_bin: str) -> str:
             "Gemini CLI was not found on PATH. Install it, then run `gemini` once and sign in with Google before retrying."
         )
     return resolved
+
+
+def _model_response_from_stdout(stdout: str) -> str:
+    """Return model text from Gemini CLI stdout, unwrapping --output-format json when present."""
+    stripped = stdout.strip()
+    if not stripped:
+        return ""
+    try:
+        payload = json.loads(stripped)
+    except json.JSONDecodeError:
+        return stdout
+    if isinstance(payload, dict) and isinstance(payload.get("response"), str):
+        return payload["response"]
+    return stdout
 
 
 def build_prompt(evidence_packet: Path) -> str:
@@ -154,6 +169,7 @@ def run_local_dry_run(
     review_output = output_dir / REVIEW_OUTPUT_NAME
     summary_output = output_dir / SUMMARY_OUTPUT_NAME
     error_output = output_dir / ERROR_OUTPUT_NAME
+    wrapper_output = output_dir / WRAPPER_OUTPUT_NAME
     prompt_output = output_dir / PROMPT_OUTPUT_NAME
 
     write_packet(repo_root, evidence_packet)
@@ -164,6 +180,7 @@ def run_local_dry_run(
     created_at = _timestamp()
 
     if dry_run:
+        wrapper_output.write_text("", encoding="utf-8")
         summary_output.write_text("", encoding="utf-8")
         error_output.write_text("dry-run mode; Gemini CLI was not invoked\n", encoding="utf-8")
         status = "prepared"
@@ -178,7 +195,8 @@ def run_local_dry_run(
             stderr=subprocess.PIPE,
             check=False,
         )
-        summary_output.write_text(result.stdout, encoding="utf-8")
+        wrapper_output.write_text(result.stdout, encoding="utf-8")
+        summary_output.write_text(_model_response_from_stdout(result.stdout), encoding="utf-8")
         error_output.write_text(result.stderr, encoding="utf-8")
         rc = result.returncode
         status = "gemini_executed"
@@ -217,6 +235,7 @@ def run_local_dry_run(
         "reviewOutput": str(review_output),
         "summaryOutput": str(summary_output),
         "errorOutput": str(error_output),
+        "wrapperOutput": str(wrapper_output),
         "promptOutput": str(prompt_output),
     }
     if ok or allow_blocked:
