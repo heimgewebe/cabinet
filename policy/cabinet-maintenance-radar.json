@@ -125,10 +125,10 @@
     "runtime_mutation",
     "cleanup_action",
     "authority_inference_from_map",
-    "direct_policy_weight_application",
     "dashboard_authority_inference",
     "service_catalog_authority_inference",
-    "task_queue_authority_inference"
+    "task_queue_authority_inference",
+    "direct_policy_weight_application"
   ],
   "primary_sources": {
     "git_pr_review": "GitHub",
