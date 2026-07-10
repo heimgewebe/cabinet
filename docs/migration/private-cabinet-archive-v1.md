@@ -73,6 +73,47 @@ python3 scripts/private_cabinet_archive.py restore \
 
 Die Wiederherstellung schreibt ausschließlich in ein neues, leeres Ziel. Sie kennt absichtlich keine produktiven Zielpfade und überschreibt keine laufende Installation.
 
+
+## Verschlüsselter Restic-Handoff
+
+`scripts/private_cabinet_restic_handoff.py` verbindet das lokale Archivwerkzeug mit einem bereits eingerichteten verschlüsselten Restic-Repository. Es speichert Klartext ausschließlich in einem neuen, eigentümergeschützten `tmpfs`-Verzeichnis. Aktiver Swap muss fehlen oder verschlüsselt beziehungsweise RAM-basiert sein.
+
+Der Handoff besitzt zwei getrennte Modi:
+
+```bash
+python3 scripts/private_cabinet_restic_handoff.py plan \
+  --home <HOME> \
+  --repo <CABINET_REPO> \
+  --app-root <CABINET_APP_ROOT>
+```
+
+`plan` liest nur. Es prüft Quellen, Abdeckung, `tmpfs`, Swap-Schutz, Kapazität, Restic-Binary, eigentümergeschützte Passwortdatei und lesenden Repositoryzugriff. Es erzeugt kein Staging-Verzeichnis und keinen Snapshot.
+
+```bash
+python3 scripts/private_cabinet_restic_handoff.py execute \
+  --home <HOME> \
+  --repo <CABINET_REPO> \
+  --app-root <CABINET_APP_ROOT> \
+  --tag <GEBUNDENER_TAG> \
+  --confirm CREATE_PRIVATE_CABINET_RESTIC_SNAPSHOT_AND_VERIFY
+```
+
+`execute` benötigt zusätzlich eine separate, exakte Bureau-Autorisierung. Der Ablauf ist fest:
+
+1. Exklusive owner-only Ausführungssperre auf `tmpfs` erwerben.
+2. Core-Dumps deaktivieren und Python-, SQLite- sowie Restic-Temporärpfade ausschließlich an owner-only `tmpfs` binden.
+3. Archiv ausschließlich auf `tmpfs` erzeugen und lokal prüfen.
+4. Vorher prüfen, dass der gebundene Tag im Repository noch nicht existiert.
+5. Genau einen getaggten Restic-Snapshot erzeugen.
+6. Nach dem Backup prüfen, dass der Tag exakt auf die zurückgegebene vollständige Snapshot-ID gebunden ist.
+7. Genau diesen Snapshot in ein zweites `tmpfs`-Verzeichnis wiederherstellen.
+8. Manifest-Hash und vollständige Archivintegrität erneut prüfen.
+9. Beide Klartext-Stagingbäume identitätsgebunden entfernen.
+
+Das Werkzeug enthält keine Retention-, Forget- oder Prune-Funktion. Eine owner-only Sperrdatei auf `tmpfs` verhindert parallele Handoffs; sie enthält keine privaten Daten. Der Plan blockiert bereits, wenn die Plattform keine symlink-resistente rekursive Löschung unterstützt. Der CLI-Pfad unterdrückt Python-Bytecode-Schreiben. Es steuert keinen Dienst. `--help`, unbekannte Argumente und ein fehlendes Bestätigungstoken führen vor jeder Arbeitswirkung zum Ende. Jeder unklare Backup-Ausgang, einschließlich Zeitüberschreitung oder Restic-Fehlercode, meldet konservativ, dass bereits ein Snapshot existieren kann; er wird nicht automatisch gelöscht. Auch frühe Staging-Cleanup-Fehler werden ausdrücklich als manuell zu bereinigen ausgewiesen.
+
+Öffentliche Receipts enthalten nur Aggregate sowie Hashes von Snapshot-ID und Tag. Restic-Endpunkt, Passwortdatei, konkrete Pfade, Snapshot-ID, Tag und private Manifestinhalte werden nicht ausgegeben.
+
 ## Was die Wiederherstellung beweist
 
 Belegt werden:
