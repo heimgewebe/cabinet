@@ -87,6 +87,9 @@ jobs:
       - name: Test Private Cabinet Archive
         run: python3 -m unittest discover -s scripts/tests -p 'test_private_cabinet_archive.py'
 
+      - name: Test Private Cabinet Restic Handoff
+        run: python3 -m unittest discover -s scripts/tests -p 'test_private_cabinet_restic_handoff.py'
+
       - name: Test External Artifact Registry
         run: python3 -m unittest discover -s scripts/tests -p 'test_external*.py'
 
