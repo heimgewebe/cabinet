@@ -12,14 +12,14 @@ Der Katalog beantwortet, welche Systeme existieren, welchem Zweck sie dienen, we
 |---|---|---|
 | Claude | agent | architecture, large refactors, deep concept review |
 | Codex | agent | code review, logic bugs, invariant checks |
-| Gemini | agent | proposed proposal-only review and scout capacity after capability and sandbox preflight; not verified or schedulable |
+| Gemini | agent | proposal-only review capacity; no recurring Cabinet maintenance schedule |
 | Jules | agent | small clear patches |
 | Local agents | agent | cheap prechecks and repetitive scans |
 | Ecosystem Map v0 | artifact | machine-readable overview graph and rendered orientation map |
 | RepoBrief | concept | public name for context-view layer |
 | Alexander | human | sensemaking, priority, approval, abort authority |
 | Bureau | repository | task cadence, delegation, run reporting |
-| Cabinet | repository | sense, evidence, prioritization, learning, map ownership |
+| Cabinet | repository | app-independent system catalog for purpose, truth ownership, stable relations and entrypoints |
 | Chronik | repository | append-only event ledger and historical evidence axis |
 | Device Graph | repository | infrastructure device graph; adjacent but not ecosystem-governance canon |
 | Grabowski | repository | operator execution, repo work, review gates |
@@ -43,17 +43,17 @@ Der Katalog beantwortet, welche Systeme existieren, welchem Zweck sie dienen, we
 |---|---|---|
 | `append_only_history` | `chronik` | leitstand |
 | `bounded_experiments` | `vibe_lab` | cabinet |
-| `branches_prs_reviews` | `github` | bureau, cabinet, leitstand |
+| `branches_prs_reviews` | `github` | bureau, leitstand |
 | `ecosystem_semantics` | `cabinet` | leitstand, schauwerk |
 | `general_operator_display` | `leitstand` | — |
-| `live_service_state` | `runtime` | leitstand, cabinet |
+| `live_service_state` | `runtime` | leitstand |
 | `local_fleet_execution` | `grabowski` | leitstand |
 | `offline_learning_proposals` | `heimlern` | cabinet |
 | `repository_context_citations` | `repobrief_lenskit` | rlens, cabinet |
 | `repository_observation_readiness` | `steuerboard` | grabowski, leitstand |
 | `shared_fleet_ci_checks` | `wgx` | github_ci |
 | `specialized_visual_rendering` | `schauwerk` | — |
-| `tasks_claims_completion` | `bureau` | leitstand, cabinet |
+| `tasks_claims_completion` | `bureau` | leitstand |
 | `technical_check_results` | `ci` | github, leitstand |
 
 ## Stabile Beziehungen
@@ -96,7 +96,7 @@ Nur Beziehungen mit einer stabilen Klasse (`active`, `bounded`, `related`) werde
 | System | Einstieg |
 |---|---|
 | Bureau | [https://github.com/heimgewebe/bureau](https://github.com/heimgewebe/bureau) |
-| Cabinet / Systemkatalog | [README.md](README.md) |
+| Cabinet / Systemkatalog | [README.md](../README.md) |
 | GitHub | [https://github.com/heimgewebe](https://github.com/heimgewebe) |
 | Grabowski | [https://github.com/heimgewebe/grabowski](https://github.com/heimgewebe/grabowski) |
 | Leitstand | [https://github.com/heimgewebe/leitstand](https://github.com/heimgewebe/leitstand) |
