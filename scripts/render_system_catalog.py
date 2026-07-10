@@ -25,6 +25,12 @@ def _cell(value: Any) -> str:
     return str(value or "").replace("|", "\\|").replace("\n", " ").strip()
 
 
+def _render_href(target: str) -> str:
+    if "://" in target or target.startswith("mailto:") or target.startswith("#"):
+        return target
+    return f"../{target.lstrip('/')}"
+
+
 def render_text() -> str:
     policy = _load(POLICY)
     nodes_doc = _load(NODES)
@@ -125,7 +131,8 @@ def render_text() -> str:
     for item in sorted(entrypoints, key=lambda value: str(value.get("label", "")).casefold()):
         label = _cell(item.get("label"))
         target = _cell(item.get("target"))
-        lines.append(f"| {label} | [{target}]({target}) |")
+        href = _cell(_render_href(target))
+        lines.append(f"| {label} | [{target}]({href}) |")
 
     lines.extend(
         [
