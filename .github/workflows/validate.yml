@@ -75,6 +75,15 @@ jobs:
       - name: Test Ecosystem Authority
         run: python3 -m unittest discover -s scripts/tests -p 'test_ecosystem_authority.py'
 
+      - name: Validate System Catalog
+        run: python3 scripts/validate_system_catalog.py
+
+      - name: Check System Catalog Projection
+        run: python3 scripts/render_system_catalog.py --check
+
+      - name: Test System Catalog
+        run: python3 -m unittest discover -s scripts/tests -p 'test_system_catalog.py'
+
       - name: Test External Artifact Registry
         run: python3 -m unittest discover -s scripts/tests -p 'test_external*.py'
 
