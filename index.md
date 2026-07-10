@@ -1,27 +1,32 @@
-# Cabinet Home
+# Cabinet Home — Heimgewebe-Systemkatalog
 
-Cabinet ordnet Repositories, Projekte, Prüfungen und nächste Schritte.
+Cabinet wird zu einem app-unabhängigen Katalog für Systeme, Zwecke, Wahrheitszuständigkeiten, stabile Beziehungen und Einstiegspunkte.
 
-## Entrée
+## Aktive Einstiege
 
-- [README](README.md) — GitHub-Fassade und Schnellstart.
-- [Agent Entry](AGENTS.md) — Lesereihenfolge, Wahrheitsgrenzen und Stop-Kriterien für LLMs und Agenten.
-- [Ecosystem Map v0](docs/blueprints/ecosystem-map-v0.md) — Systemkarte, Dateien, Pflegeprinzipien und Reifekriterien.
-- [Cabinet Role Boundary v1](docs/blueprints/cabinet-role-boundary-v1.md) — Rollenentscheidung: Cabinet behalten; Queue, Operator, Dashboard und Servicekatalog an zuständige Organe auslagern.
-- [Mermaidkarte](rendered/ecosystem-map.mmd) — lesbare Übersicht.
-- [Registry-Mermaidkarte](rendered/ecosystem-registry-map.mmd) — generierte Ansicht aus Knoten und Kanten.
-- [Heim-PC Operatorium Index v0](docs/blueprints/heim-pc-operatorium-index-v0.md) — lokale Operatorium-Schicht.
-- [Cabinet Maintenance Radar v0](docs/blueprints/cabinet-maintenance-radar-v0.md) — read-only Kohärenzradar, Wartungsbefunde und Heimlern-Rückkopplung.
-- [Operator Ecosystem Redundancy Audit v1](docs/blueprints/operator-ecosystem-redundancy-audit-v1.md) — Autorität, reale Konsumenten, Doppelungen, Pflegekosten und Abschaltbarkeit der Operator-Organe.
+- [README](README.md) — Zielrolle und Schnellstart.
+- [Agent Entry](AGENTS.md) — Lesereihenfolge, Wahrheitsgrenzen und Stop-Kriterien.
+- [Lesbarer Systemkatalog](rendered/system-catalog.md) — deterministisch erzeugte Katalogansicht ohne Live-, Task- oder Merge-Status.
+- [Systemkatalog-Policy](policy/system-catalog.v1.json) — maschinenlesbare Rollen- und Wirkungsgrenze.
+- [Authority Matrix](registry/ecosystem/authority-matrix.v1.json) — Zuordnung der Wahrheitsdomänen zu ihren Primärquellen.
+- [Knoten](registry/ecosystem/nodes.json) und [Beziehungen](registry/ecosystem/edges.json) — heutige Registry während der Migration.
+- [Migrationsmatrix](docs/migration/cabinet-surface-matrix-v1.md) — Keep/Simplify/Move/Archive/Remove für die bestehende Oberfläche.
+- [Zielformat](catalog/system-catalog.schema.v1.json) und [nichtkanonisches Beispiel](catalog/system-catalog.example.v1.json) — app-unabhängiger Datenvertrag.
 
-## Aktive Räume
+## Wahrheitsrouting
 
-- [Bestand](bestand/index.md) – Repositories, Projekte, Quellen und Beziehungen
-- [Prüfung](pruefung/index.md) – Läufe, Belege, Befunde, Widersprüche und Risiken
-- [Steuerung](steuerung/index.md) – Lage, Entscheidungen, Aufgaben, Blocker und Übergaben
+- Aufgaben, Queue und Receipts → Bureau.
+- Repository-, PR- und Reviewzustand → GitHub.
+- technische Prüfergebnisse → CI und Review-Gates.
+- laufender Dienstzustand → Runtime, Healthchecks, systemd und Logs.
+- lokale und repositorybezogene Ausführung → Grabowski.
+- allgemeine Live-Anzeige → Leitstand.
+- Snapshots und zitierfähiger Repositorykontext → RepoBrief / Lenskit.
 
-## Legacy-Sammlungen
+Cabinet verweist auf diese Quellen, führt aber keine zweite Kopie ihrer wechselnden Zustände.
 
-Vorzimmer, Heimgewebe, Weltgewebe, Werkstatt, Labor und Betrieb bleiben an ihren bisherigen Pfaden lesbar. Ihre Manifeste kennzeichnen sie als Legacy-Sammlungen; sie sind keine aktiven Top-Level-Räume mehr.
+## Migrationsflächen
 
-Der Repository-Cutover ist versioniert. Ob eine bereits laufende lokale Cabinet-Instanz den neuen Baum eingelesen hat, muss separat geprüft werden.
+Die bisherigen Bereiche [Bestand](bestand/index.md), [Prüfung](pruefung/index.md) und [Steuerung](steuerung/index.md) sowie alte Karten-, Radar-, Gemini- und Runtime-Dokumente bleiben vorerst lesbar. Sie sind jedoch Migrations- oder historische Flächen und nicht automatisch Bestandteil des Zielkatalogs.
+
+Die externe Cabinet-App ist nur noch ein vorübergehender optionaler Viewer. Abschaltung, Datenexport und Repository-Rename werden separat im Bureau gesteuert.

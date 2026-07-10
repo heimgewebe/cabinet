@@ -1,42 +1,73 @@
-# Cabinet Entrée
+# Cabinet — Heimgewebe-Systemkatalog
 
-Cabinet ist die Sinn-, Evidenz- und Priorisierungsschicht für das Heimgewebe-Ökosystem.
+Cabinet beschreibt die Systeme des Heimgewebe-Ökosystems, ihre Zwecke, Wahrheitszuständigkeiten, stabilen Beziehungen und Einstiegspunkte.
 
-Dieser Einstieg ist eine GitHub-Fassade. Das kanonische Inhaltsverzeichnis liegt in [Cabinet Home](index.md). Agenten und LLMs lesen zusätzlich [AGENTS.md](AGENTS.md).
+Das Repository befindet sich in einer kontrollierten Migration weg von der externen Cabinet AI Workspace App. Die App ist nur noch ein vorübergehender optionaler Viewer; Katalogdaten, Validierung und Rendering funktionieren unabhängig von ihr.
 
 ## Schnellstart
 
-1. **Cabinet Home öffnen:** [index.md](index.md)
+1. **Lesbaren Systemkatalog öffnen:** [rendered/system-catalog.md](rendered/system-catalog.md)
 2. **Agentenregeln lesen:** [AGENTS.md](AGENTS.md)
-3. **Systemkarte finden:** [Ecosystem Map v0](docs/blueprints/ecosystem-map-v0.md)
-4. **Rollenentscheidung lesen:** [Cabinet Role Boundary v1](docs/blueprints/cabinet-role-boundary-v1.md)
-5. **Mermaidkarten direkt öffnen:** [lesbare Übersicht](rendered/ecosystem-map.mmd) und [generierte Registry-Projektion](rendered/ecosystem-registry-map.mmd)
-6. **Redundanz prüfen:** [Operator Ecosystem Redundancy Audit v1](docs/blueprints/operator-ecosystem-redundancy-audit-v1.md)
-7. **Autorität und Nutzung prüfen:** [Authority Matrix](registry/ecosystem/authority-matrix.v1.json) und [Consumer Usage Snapshot](registry/ecosystem/consumer-usage.v1.json)
+3. **Maschinenlesbare Rollenpolicy lesen:** [policy/system-catalog.v1.json](policy/system-catalog.v1.json)
+4. **Wahrheitszuständigkeiten prüfen:** [registry/ecosystem/authority-matrix.v1.json](registry/ecosystem/authority-matrix.v1.json)
+5. **Aktuelle Registry prüfen:** [Knoten](registry/ecosystem/nodes.json) und [Beziehungen](registry/ecosystem/edges.json)
+6. **Migrationsmatrix lesen:** [docs/migration/cabinet-surface-matrix-v1.md](docs/migration/cabinet-surface-matrix-v1.md)
+7. **Katalogschema ansehen:** [Schema](catalog/system-catalog.schema.v1.json) und [nichtkanonisches Beispiel](catalog/system-catalog.example.v1.json)
 
-## Rolle
+## Cabinet beantwortet
 
-Cabinet bleibt der kanonische Ort für Bedeutung, Belege, Priorisierung, Karten-Semantik und read-only Kohärenzradar. Cabinet ist nicht die Aufgabenqueue, nicht der Operator, nicht das Live-Dashboard, nicht der Servicekatalog und nicht die Primärquelle für GitHub-, CI- oder Runtime-Wahrheit.
+- Welche Systeme existieren?
+- Was ist ihr Zweck?
+- Wofür sind sie ausdrücklich nicht zuständig?
+- Wem gehört welche Wahrheit?
+- Welche stabilen Beziehungen bestehen?
+- Wo liegen die Einstiegspunkte?
 
-Die Rollenentscheidung steht in [Cabinet Role Boundary v1](docs/blueprints/cabinet-role-boundary-v1.md). Kurzform: Cabinet behalten; Bureau, Grabowski, RepoBrief/Lenskit, Leitstand und spätere Spezialwerkzeuge gezielt daneben einsetzen.
+## Cabinet beantwortet nicht
 
-## Karte ansehen
+- Welche Aufgabe ist als Nächstes dran?
+- Welcher Task ist aktiv oder blockiert?
+- Ist ein Dienst gesund?
+- Ist ein Pull Request mergebereit?
+- Welcher Agent soll handeln?
+- Welche Priorität oder Taktung gilt gerade?
 
-- **Lesbare Mermaid-Übersicht:** [rendered/ecosystem-map.mmd](rendered/ecosystem-map.mmd)
-- **Generierte Registry-Projektion:** [rendered/ecosystem-registry-map.mmd](rendered/ecosystem-registry-map.mmd)
+## Wahrheitsordnung
 
-Diese Dateien sind Mermaid-Quellen. Für eine gerenderte Ansicht nutze derzeit einen Editor mit Mermaid-Preview oder einen Mermaid-Renderer. Eine spätere Leitstand-Ansicht ist der richtige Dashboard-Ort; Cabinet bleibt der kanonische Kartenort.
+| Aussage | Primärquelle |
+|---|---|
+| Aufgaben, Queue, Claims und Receipts | Bureau |
+| lokale und repositorybezogene Ausführung | Grabowski |
+| Repositories, Branches, Pull Requests und Reviews | GitHub |
+| technische Prüfergebnisse | CI und Review-Gates |
+| laufender Dienstzustand | Runtime, Healthchecks, systemd und Logs |
+| allgemeine Live-Anzeige | Leitstand |
+| Repo-Snapshots und zitierfähiger Kontext | RepoBrief / Lenskit |
+| stabile Ökosystem-Semantik und Truth Ownership | dieser Systemkatalog |
 
-Die Mermaidkarten sind Orientierung und Driftfläche, kein Beweis für Claim-Wahrheit, Merge-Reife, Runtime-Korrektheit oder Agenten-Autorität.
+Cabinet verweist auf die jeweilige Primärquelle. Es kopiert deren wechselnde Zustände nicht in ein zweites Statusmodell.
+
+## Technischer Kern
+
+Der notwendige Unterbau besteht nur aus:
+
+- versionierten Katalog- und Registry-Dateien;
+- deterministischen Validatoren;
+- deterministischen Renderern;
+- CI-Prüfungen gegen Inkonsistenzen und private Runtime-Leaks.
+
+Kein Server, Daemon, Scheduler, KI-Agent oder Datenbankdienst ist für den Katalog erforderlich.
+
+## Migration
+
+Der erste Schritt ist bewusst nichtdestruktiv. Bestehende Räume, Radar-, Gemini- und Runtime-Flächen bleiben zunächst lesbar, sind aber Migrationsgegenstand und keine Zielarchitektur. Abschaltung der App, Löschung lokaler Daten und Umbenennung des Repositories benötigen eigene Bureau-Tasks und separate Review-Gates.
+
+Die geplante Zielidentität nach abgeschlossener Entkopplung lautet `heimgewebe/heimgewebe-katalog`.
 
 ## Nicht verwechseln
 
-- Dieses README ist ein Wegweiser, keine primäre Wahrheitsquelle.
-- Für Git-, PR- und Review-Zustand gilt GitHub.
-- Für technische Prüfsignale gelten CI und Gates.
-- Für laufende Dienste gelten Runtime, systemd, Logs und Healthchecks.
-- Für Aufgaben, Taktung und Receipts gilt Bureau.
-- Für lokale/repo-bezogene Ausführung gilt Grabowski nach Freigabe.
-- Für Freigabe, Priorität und Abbruch gilt die menschliche Entscheidung.
-- Cabinet besitzt die Kartensemantik, nicht die Wahrheit aller Quellen.
-- Gemini ist derzeit nur vorgeschlagene proposal-only Kapazität und vor Capability-/Sandbox-Preflight nicht einplanbar/schedulable.
+- Der lesbare Katalog ist eine Projektion, keine Live- oder Merge-Wahrheit.
+- Mermaidkarten sind Orientierung, kein Wahrheitsbeweis.
+- Das öffentliche Consumer-Usage-Artefakt enthält nur redaktierte Aggregataussagen; Runtime-Details bleiben privat.
+- Die externe Cabinet-App ist weder Canon noch notwendiger Runtime-Unterbau.
+- Ein wiederkehrender Gemini-Maintenance-Scout wird nicht eingerichtet.

@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "kind": "heimgewebe_system_catalog",
+  "exampleOnly": true,
+  "systems": [
+    {
+      "id": "cabinet",
+      "name": "Cabinet / Heimgewebe-Systemkatalog",
+      "type": "repository",
+      "purpose": "Beschreibt Systeme, Zwecke, Wahrheitszuständigkeiten, stabile Beziehungen und Einstiegspunkte.",
+      "notResponsibleFor": [
+        "Aufgabenpriorisierung",
+        "Runtime-Gesundheit",
+        "Merge-Reife",
+        "Agentendisposition"
+      ],
+      "truthOwnership": [
+        "ecosystem_semantics"
+      ],
+      "entrypoints": {
+        "repository": "https://github.com/heimgewebe/cabinet",
+        "readme": "README.md",
+        "agentEntry": "AGENTS.md"
+      }
+    },
+    {
+      "id": "bureau",
+      "name": "Bureau",
+      "type": "repository",
+      "purpose": "Verwaltet Aufgaben, Queue, Claims, Kandidaten und Receipts.",
+      "notResponsibleFor": [
+        "Runtime-Ausführung",
+        "Merge-Reife",
+        "Ökosystem-Semantik"
+      ],
+      "truthOwnership": [
+        "task_state",
+        "queue_order",
+        "handoff_state"
+      ],
+      "entrypoints": {
+        "repository": "https://github.com/heimgewebe/bureau",
+        "readme": "README.md",
+        "agentEntry": "AGENTS.md"
+      }
+    },
+    {
+      "id": "grabowski",
+      "name": "Grabowski",
+      "type": "repository",
+      "purpose": "Führt freigegebene lokale und repositorybezogene Arbeit aus und erzeugt Receipts.",
+      "notResponsibleFor": [
+        "Aufgaben-Canon",
+        "Runtime-Wahrheit",
+        "Ökosystem-Semantik"
+      ],
+      "truthOwnership": [
+        "local_fleet_execution"
+      ],
+      "entrypoints": {
+        "repository": "https://github.com/heimgewebe/grabowski",
+        "readme": "README.md",
+        "agentEntry": "AGENTS.md"
+      }
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "type": "service",
+      "purpose": "Ist Primärquelle für Repositories, Branches, Pull Requests, Issues und Reviews.",
+      "notResponsibleFor": [
+        "lokale Runtime-Gesundheit",
+        "Aufgabenpriorität außerhalb der registrierten Systeme"
+      ],
+      "truthOwnership": [
+        "branches_prs_reviews"
+      ],
+      "entrypoints": {
+        "organization": "https://github.com/heimgewebe"
+      }
+    },
+    {
+      "id": "runtime",
+      "name": "Runtime",
+      "type": "runtime",
+      "purpose": "Ist Primärquelle für den tatsächlich laufenden Zustand von Diensten.",
+      "notResponsibleFor": [
+        "Aufgabenpriorisierung",
+        "Merge-Reife",
+        "Katalog-Semantik"
+      ],
+      "truthOwnership": [
+        "live_service_state"
+      ],
+      "entrypoints": {
+        "catalogGuidance": "registry/ecosystem/authority-matrix.v1.json"
+      }
+    }
+  ],
+  "relations": [
+    {
+      "from": "cabinet",
+      "to": "bureau",
+      "type": "routes_to",
+      "meaning": "Aktuelle Aufgaben- und Queuefragen werden an Bureau verwiesen."
+    },
+    {
+      "from": "bureau",
+      "to": "grabowski",
+      "type": "authorizes_execution_by",
+      "meaning": "Bureau kann freigegebene Arbeit an Grabowski übergeben."
+    },
+    {
+      "from": "grabowski",
+      "to": "github",
+      "type": "works_with",
+      "meaning": "Repositoryänderungen werden über GitHub-Branches und Pull Requests veröffentlicht."
+    },
+    {
+      "from": "cabinet",
+      "to": "runtime",
+      "type": "points_to_truth_owner",
+      "meaning": "Cabinet verweist für Live-Zustände auf Runtime-Quellen, ohne sie zu kopieren."
+    }
+  ],
+  "truthOwners": [
+    {"domain": "ecosystem_semantics", "owner": "cabinet"},
+    {"domain": "task_state", "owner": "bureau"},
+    {"domain": "local_fleet_execution", "owner": "grabowski"},
+    {"domain": "branches_prs_reviews", "owner": "github"},
+    {"domain": "live_service_state", "owner": "runtime"}
+  ]
+}

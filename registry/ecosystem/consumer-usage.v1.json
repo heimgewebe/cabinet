@@ -1,98 +1,87 @@
 {
   "schemaVersion": 1,
   "kind": "operator_consumer_usage_snapshot",
+  "visibility": "public_redacted_summary",
   "observedAt": "2026-07-10T08:05:00+02:00",
   "window": "7d",
-  "hosts": [
-    {"id": "heim-pc", "status": "observed", "method": "local systemd, journal, listeners and HTTP probes"},
-    {"id": "heimberry", "status": "observed", "method": "registered Grabowski SSH fleet probe"},
-    {"id": "wg-prod-1", "status": "partially_observed", "method": "allowlisted listener probe"},
-    {"id": "heimserver", "status": "unknown_unreachable", "method": "registered Grabowski SSH fleet probe returned no route to host"}
-  ],
+  "coverageSummary": {
+    "observedLocations": 2,
+    "partiallyObservedLocations": 1,
+    "unknownLocations": 1,
+    "detailPolicy": "Host, unit, listener, journal and reachability details are retained only in private operator evidence."
+  },
   "surfaces": [
     {
       "id": "cabinet",
       "classification": "runtime_observed",
-      "localUnit": "cabinet.service",
-      "active": true,
-      "journalLines7d": 5,
-      "usageSignal": "service lifecycle only; no privacy-preserving request counter available",
-      "decision": "retain_semantic_source_and_measure_requests_before_service_shutdown"
+      "usageSignal": "Service lifecycle was observed; no privacy-preserving human request counter was available.",
+      "decision": "retain_semantic_source_and_measure_usage_before_shutdown"
     },
     {
       "id": "leitstand",
       "classification": "runtime_observed",
-      "localUnit": "leitstand.service",
-      "active": true,
-      "journalLines7d": 42,
-      "httpProbe": {"url": "http://127.0.0.1:3000", "status": 200},
-      "usageSignal": "active display and ten-minute snapshot producer; request frequency not separated from health checks",
+      "usageSignal": "Display and snapshot activity was observed; human requests were not separable from automated checks.",
       "decision": "retain_as_single_general_operator_display"
     },
     {
       "id": "rlens",
       "classification": "runtime_observed",
-      "localUnit": "rlens.service",
-      "active": true,
-      "journalLines7d": 22,
-      "usageSignal": "journal contains local API requests including Cabinet artifact lookup",
+      "usageSignal": "Local artifact-consumer activity was observed without publishing endpoint or request details.",
       "decision": "retain_pending_artifact_surface_consolidation"
     },
     {
       "id": "schauwerk",
-      "classification": "timer_observed_no_service_activity",
-      "localUnit": "schauwerk-miro-keepalive.timer",
-      "active": true,
-      "journalLines7d": 0,
-      "usageSignal": "timer exists but no keepalive service journal entries in window",
-      "decision": "retain_specialized_only_and_review_timer_need"
+      "classification": "scheduled_surface_without_proven_usage",
+      "usageSignal": "A scheduled integration surface exists, but the public evidence does not establish meaningful use.",
+      "decision": "retain_specialized_only_and_review_schedule_need"
     },
     {
       "id": "chronik",
-      "classification": "source_integrated_no_local_runtime",
-      "active": false,
-      "usageSignal": "repository integrations exist; no local unit observed",
+      "classification": "source_integrated_without_proven_runtime_consumer",
+      "usageSignal": "Repository integrations exist; the public evidence does not establish a high-value active consumer.",
       "decision": "do_not_activate_until_high_value_event_consumer_is_proven"
     },
     {
       "id": "heimlern",
-      "classification": "declared_or_source_integrated_no_local_runtime",
-      "active": false,
-      "usageSignal": "proposal contracts exist; no local unit observed",
+      "classification": "proposal_surface_without_proven_runtime_consumer",
+      "usageSignal": "Proposal contracts exist; no current consumer is established by this public snapshot.",
       "decision": "gate_new_work_by_named_consumer"
     },
     {
       "id": "vibe_lab",
-      "classification": "repository_only_no_local_runtime",
-      "active": false,
-      "usageSignal": "completed and planned experiment artifacts only",
+      "classification": "repository_only",
+      "usageSignal": "The repository contains experiment artifacts; ongoing consumption is not established.",
       "decision": "require_consumer_metric_and_expiry"
     },
     {
       "id": "steuerboard",
-      "classification": "source_integrated_no_local_runtime",
-      "active": false,
-      "usageSignal": "reports/readiness referenced; no service unit and no effect-command consumer found",
+      "classification": "source_integrated_without_proven_effect_consumer",
+      "usageSignal": "Readiness and report references exist; no effect-bearing consumer is established.",
       "decision": "observation_and_derivation_only"
     },
     {
       "id": "wgx",
-      "classification": "ci_source_integrated_no_local_runtime",
-      "active": false,
-      "usageSignal": "repository workflow/template consumers; no dedicated local service",
+      "classification": "ci_source_integrated",
+      "usageSignal": "Workflow and template consumers exist; a separate operator runtime is not established.",
       "decision": "retain_only_shared_fleet_checks"
     }
   ],
-  "remoteFindings": [
-    {"host": "heimberry", "finding": "only relevant observed unit was grabowski-restic-rest-server.service"},
-    {"host": "wg-prod-1", "finding": "listeners on 22, 80, 443 and two loopback ports; no attribution to optional operator organs"},
-    {"host": "heimserver", "finding": "unreachable; absence cannot be claimed"}
-  ],
+  "privateEvidence": {
+    "storedOutsideRepository": true,
+    "publicDetailsRedacted": true,
+    "contains": [
+      "host identifiers",
+      "unit names",
+      "listener and endpoint details",
+      "journal counts",
+      "reachability diagnostics"
+    ]
+  },
   "measurementLimits": [
-    "journal line counts are activity indicators, not unique human usage",
-    "Cabinet has no bounded request counter in this snapshot",
-    "heimserver could not be inventoried",
-    "source references prove integration paths, not semantic consumption"
+    "Activity indicators are not unique human usage.",
+    "No bounded request counter exists for every surface.",
+    "Remote coverage is incomplete.",
+    "Source references prove integration paths, not semantic consumption."
   ],
   "doesNotEstablish": [
     "safe_shutdown",
