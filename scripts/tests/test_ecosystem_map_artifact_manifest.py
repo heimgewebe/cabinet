@@ -75,10 +75,15 @@ class EcosystemMapManifestTests(unittest.TestCase):
         )
         self.assertEqual(schema_non_claims, DOES_NOT_ESTABLISH)
 
-    def test_two_temporary_consumer_roles_share_one_canonical_map(self) -> None:
+    def test_canonical_role_and_two_temporary_consumer_aliases_share_one_map(self) -> None:
+        self.assertEqual(ARTIFACT_SPECS[0]["role"], "canonical_ecosystem_map_mermaid")
         self.assertEqual(ARTIFACT_SPECS[0]["path"], "rendered/ecosystem-registry-map.mmd")
         self.assertEqual(ARTIFACT_SPECS[1]["path"], ARTIFACT_SPECS[0]["path"])
-        self.assertNotEqual(ARTIFACT_SPECS[0]["role"], ARTIFACT_SPECS[1]["role"])
+        self.assertEqual(ARTIFACT_SPECS[2]["path"], ARTIFACT_SPECS[0]["path"])
+        self.assertEqual(
+            {ARTIFACT_SPECS[1]["role"], ARTIFACT_SPECS[2]["role"]},
+            {"readable_overview_mermaid", "generated_registry_projection_mermaid"},
+        )
 
     def test_missing_artifact_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

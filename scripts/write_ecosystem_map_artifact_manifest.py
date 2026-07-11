@@ -26,6 +26,11 @@ DOES_NOT_ESTABLISH = (
 )
 ARTIFACT_SPECS: tuple[dict[str, str], ...] = (
     {
+        "role": "canonical_ecosystem_map_mermaid",
+        "path": "rendered/ecosystem-registry-map.mmd",
+        "contentType": "text/mermaid",
+    },
+    {
         "role": "readable_overview_mermaid",
         "path": "rendered/ecosystem-registry-map.mmd",
         "contentType": "text/mermaid",

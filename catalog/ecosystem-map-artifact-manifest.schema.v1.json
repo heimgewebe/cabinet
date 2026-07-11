@@ -53,11 +53,14 @@
       "additionalProperties": false
     },
     "artifactCount": {
-      "const": 6
+      "const": 7
     },
     "artifacts": {
       "type": "array",
       "prefixItems": [
+        {
+          "$ref": "#/$defs/canonicalEcosystemMapMermaid"
+        },
         {
           "$ref": "#/$defs/readableOverviewMermaid"
         },
@@ -78,8 +81,8 @@
         }
       ],
       "items": false,
-      "minItems": 6,
-      "maxItems": 6
+      "minItems": 7,
+      "maxItems": 7
     },
     "doesNotEstablish": {
       "type": "array",
@@ -245,6 +248,26 @@
             },
             "contentType": {
               "const": "application/json"
+            }
+          }
+        }
+      ]
+    },
+    "canonicalEcosystemMapMermaid": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/artifactBase"
+        },
+        {
+          "properties": {
+            "role": {
+              "const": "canonical_ecosystem_map_mermaid"
+            },
+            "path": {
+              "const": "rendered/ecosystem-registry-map.mmd"
+            },
+            "contentType": {
+              "const": "text/mermaid"
             }
           }
         }
