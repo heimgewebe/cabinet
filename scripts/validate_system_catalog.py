@@ -355,6 +355,8 @@ def validate(root: Path = ROOT) -> dict[str, Any]:
         raise ValueError("generated map binding mismatch")
     if policy.get("canonicalProjectionPolicy") != str(VIEW_REL):
         raise ValueError("projection policy binding mismatch")
+    if policy.get("publishedArtifactManifest") != "rendered/ecosystem-map-artifact-manifest.json":
+        raise ValueError("published artifact manifest binding mismatch")
     archive = policy.get("archiveBoundary")
     if not isinstance(archive, dict) or archive != {
         "path": str(ARCHIVE_REL),
