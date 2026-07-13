@@ -131,7 +131,8 @@ def check_gitignore_text(text: str) -> None:
     stale = sorted(
         pattern
         for pattern in patterns
-        if any(marker in pattern for marker in LEGACY_IGNORE_MARKERS)
+        if not pattern.startswith("!")
+        and any(marker in pattern for marker in LEGACY_IGNORE_MARKERS)
     )
     if stale:
         fail(

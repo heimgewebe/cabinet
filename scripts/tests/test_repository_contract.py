@@ -16,6 +16,9 @@ class RepositoryContractTests(unittest.TestCase):
     def test_generic_secret_and_temp_patterns_remain_allowed(self) -> None:
         MODULE.check_gitignore_text(".env\n.env.*\n*.pem\n*.log\n")
 
+    def test_negated_legacy_pattern_remains_allowed(self) -> None:
+        MODULE.check_gitignore_text("!.agents/\n!docs/archive/cabinet-era/**/.agents/\n")
+
     def test_cabinet_runtime_patterns_may_not_be_hidden(self) -> None:
         with self.assertRaisesRegex(SystemExit, "must remain visible"):
             MODULE.check_gitignore_text(".cabinet.db\n.cabinet-state/\n")
