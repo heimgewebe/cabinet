@@ -197,6 +197,34 @@ class EcosystemMapManifestTests(unittest.TestCase):
             with self.assertRaisesRegex(EcosystemMapManifestError, "stale for current artifacts"):
                 check_manifest(root)
 
+    def test_write_rejects_feature_commit_not_on_origin_main(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base_commit = initialize_repository(root)
+            git(root, "update-ref", "refs/remotes/origin/main", base_commit)
+            git(root, "switch", "-qc", "feature")
+            (root / "feature-note.txt").write_text("temporary branch commit\n", encoding="utf-8")
+            git(root, "add", "feature-note.txt")
+            git(root, "commit", "-qm", "feature-only commit")
+            feature_commit = git(root, "rev-parse", "HEAD")
+            with self.assertRaisesRegex(
+                EcosystemMapManifestError,
+                "not an ancestor of durable ref refs/remotes/origin/main",
+            ):
+                write_manifest(root, DEFAULT_OUTPUT, source_commit=feature_commit)
+
+    def test_write_accepts_origin_main_commit_from_feature_branch(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            base_commit = initialize_repository(root)
+            git(root, "update-ref", "refs/remotes/origin/main", base_commit)
+            git(root, "switch", "-qc", "feature")
+            (root / "feature-note.txt").write_text("temporary branch commit\n", encoding="utf-8")
+            git(root, "add", "feature-note.txt")
+            git(root, "commit", "-qm", "feature-only commit")
+            manifest = write_manifest(root, DEFAULT_OUTPUT, source_commit=base_commit)
+            self.assertEqual(manifest["source"]["commit"], base_commit)
+
     def test_check_rejects_source_commit_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

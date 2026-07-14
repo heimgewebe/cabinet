@@ -51,8 +51,8 @@
   "schemaPath": "catalog/ecosystem-map-artifact-manifest.schema.v1.json",
   "schemaVersion": 1,
   "source": {
-    "commit": "7872cf17157c7b3e15ee79599218062ee15a4987",
-    "generatedAt": "2026-07-14T18:25:00Z",
+    "commit": "fe69cec726a9026b15afa1abe66337c20eca4fdb",
+    "generatedAt": "2026-07-14T13:27:50Z",
     "repository": "heimgewebe/systemkatalog"
   }
 }

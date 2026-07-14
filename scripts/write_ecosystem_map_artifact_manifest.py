@@ -18,6 +18,7 @@ CONTRACT_VERSION = "1"
 MANIFEST_KIND = "system_catalog_map_artifact_manifest"
 SCHEMA_PATH = "catalog/ecosystem-map-artifact-manifest.schema.v1.json"
 DEFAULT_OUTPUT = Path("rendered/ecosystem-map-artifact-manifest.json")
+DEFAULT_BRANCH_REF = "refs/remotes/origin/main"
 GENERATED_FILE_MODE = 0o644
 DOES_NOT_ESTABLISH = (
     "claim_truth",
@@ -113,10 +114,32 @@ def _git_commit_timestamp(root: Path, commit: str) -> str:
     return parsed.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def _git_is_ancestor(root: Path, commit: str) -> bool:
+def _git_ref_exists(root: Path, ref: str) -> bool:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}"],
+            cwd=root,
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except OSError as exc:
+        raise EcosystemMapManifestError("could not inspect durable source ref") from exc
+    if result.returncode == 0:
+        return True
+    if result.returncode == 1:
+        return False
+    raise EcosystemMapManifestError("could not inspect durable source ref")
+
+
+def _durable_source_ref(root: Path) -> str:
+    return DEFAULT_BRANCH_REF if _git_ref_exists(root, DEFAULT_BRANCH_REF) else "HEAD"
+
+
+def _git_is_ancestor(root: Path, commit: str, descendant: str) -> bool:
     try:
         subprocess.run(
-            ["git", "merge-base", "--is-ancestor", commit, "HEAD"],
+            ["git", "merge-base", "--is-ancestor", commit, descendant],
             cwd=root,
             check=True,
             stdout=subprocess.DEVNULL,
@@ -244,8 +267,11 @@ def _load_manifest(path: Path) -> dict[str, Any]:
 
 def _validate_source_binding(root: Path, manifest: dict[str, Any]) -> None:
     commit = manifest["source"]["commit"]
-    if not _git_is_ancestor(root, commit):
-        raise EcosystemMapManifestError("manifest source commit is not an ancestor of HEAD")
+    durable_ref = _durable_source_ref(root)
+    if not _git_is_ancestor(root, commit, durable_ref):
+        raise EcosystemMapManifestError(
+            f"manifest source commit is not an ancestor of durable ref {durable_ref}"
+        )
     for item in manifest["artifacts"]:
         content = _git_artifact(root, commit, item["path"])
         if len(content) != item["bytes"] or _sha256_bytes(content) != item["sha256"]:
@@ -260,6 +286,7 @@ def check_manifest(repo_root: Path, output: Path = DEFAULT_OUTPUT) -> dict[str, 
     manifest = _load_manifest(target)
     validate_manifest(manifest)
     source = manifest["source"]
+    _validate_source_binding(root, manifest)
     expected = build_manifest(
         root,
         source_commit=source["commit"],
@@ -267,7 +294,6 @@ def check_manifest(repo_root: Path, output: Path = DEFAULT_OUTPUT) -> dict[str, 
     )
     if manifest != expected:
         raise EcosystemMapManifestError("published manifest is stale for current artifacts")
-    _validate_source_binding(root, manifest)
     return manifest
 
 
