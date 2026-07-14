@@ -18,6 +18,7 @@ SHA256 = re.compile(r"^[0-9a-f]{64}$")
 REPOSITORY = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 LOCATOR_KINDS = {"file", "json_pointer", "repository_metadata", "private_repository_metadata"}
 METHODS = {
+    "repository_normative_contract",
     "repository_primary_document",
     "github_repository_metadata",
     "private_repository_metadata_projection",
