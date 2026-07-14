@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "kind": "system_catalog_source_bindings",
   "catalogRepository": "heimgewebe/systemkatalog",
-  "observedAt": "2026-07-13T13:20:00+02:00",
+  "observedAt": "2026-07-14T20:33:14+02:00",
   "systems": [
     {
       "system": "actor:alexander",
@@ -316,17 +316,17 @@
       "system": "repo:metarepo",
       "source": {
         "repository": "heimgewebe/metarepo",
-        "commit": "4777fd5cfafea22813f9c3d647b33a0ffefd994b",
+        "commit": "894657cef6734ecaf64813e83fc0433212d8fd5d",
         "locator": {
           "kind": "file",
-          "path": "README.md",
-          "contentSha256": "f338c90b2e2a4c60c5f54ee9b666e2b16b91489cb5e929a382bc3337bf815810"
+          "path": "system/metarepo-role.v1.json",
+          "contentSha256": "af62ea59908708c77640162fcf4c2c306ec4e9266bd08800b0756d1510e9c1dd"
         },
         "defaultBranch": "main"
       },
-      "reviewedAt": "2026-07-13T07:55:00+02:00",
-      "method": "repository_primary_document",
-      "uncertainty": 0.08
+      "reviewedAt": "2026-07-14T20:21:03+02:00",
+      "method": "repository_normative_contract",
+      "uncertainty": 0.02
     },
     {
       "system": "repo:wgx",
@@ -1091,7 +1091,7 @@
       },
       "source": {
         "repository": "heimgewebe/systemkatalog",
-        "commit": "717a0d4ad4d40ecdebe6bd10b5f1b5dbaac0b707",
+        "commit": "fe69cec726a9026b15afa1abe66337c20eca4fdb",
         "locator": {
           "kind": "json_pointer",
           "path": "registry/ecosystem/edges.json",
@@ -1100,7 +1100,7 @@
         },
         "defaultBranch": "main"
       },
-      "reviewedAt": "2026-07-13T13:20:00+02:00",
+      "reviewedAt": "2026-07-14T20:33:14+02:00",
       "method": "catalog_curator_review",
       "uncertainty": 0.08
     },
@@ -1511,7 +1511,7 @@
       },
       "source": {
         "repository": "heimgewebe/systemkatalog",
-        "commit": "717a0d4ad4d40ecdebe6bd10b5f1b5dbaac0b707",
+        "commit": "fe69cec726a9026b15afa1abe66337c20eca4fdb",
         "locator": {
           "kind": "json_pointer",
           "path": "registry/ecosystem/edges.json",
@@ -1520,7 +1520,7 @@
         },
         "defaultBranch": "main"
       },
-      "reviewedAt": "2026-07-13T13:20:00+02:00",
+      "reviewedAt": "2026-07-14T20:33:14+02:00",
       "method": "catalog_curator_review",
       "uncertainty": 0.08
     }

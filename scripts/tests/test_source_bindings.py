@@ -14,6 +14,7 @@ if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 from system_catalog_sources import (  # noqa: E402
+    METHODS,
     _validate_bound_relation_identity,
     _validate_bound_system_identity,
     _validate_local_source_bytes,
@@ -32,6 +33,24 @@ class SourceBindingTests(unittest.TestCase):
         self.assertEqual(result["sourceSystemBindings"], result["registrySystems"])
         self.assertEqual(result["sourceRelationBindings"], result["registryRelations"])
         self.assertEqual(result["freshnessRules"], 5)
+
+    def test_normative_contract_method_and_metarepo_binding(self) -> None:
+        self.assertIn("repository_normative_contract", METHODS)
+        bindings = json.loads(
+            (ROOT / "registry/ecosystem/source-bindings.v1.json").read_text(encoding="utf-8")
+        )
+        item = next(value for value in bindings["systems"] if value["system"] == "repo:metarepo")
+        self.assertEqual(item["method"], "repository_normative_contract")
+        self.assertEqual(
+            item["source"]["commit"],
+            "894657cef6734ecaf64813e83fc0433212d8fd5d",
+        )
+        self.assertEqual(item["source"]["locator"]["path"], "system/metarepo-role.v1.json")
+        self.assertEqual(
+            item["source"]["locator"]["contentSha256"],
+            "af62ea59908708c77640162fcf4c2c306ec4e9266bd08800b0756d1510e9c1dd",
+        )
+        self.assertLessEqual(item["uncertainty"], 0.03)
 
     def test_private_repository_bindings_publish_no_commit(self) -> None:
         bindings = json.loads((ROOT / "registry/ecosystem/source-bindings.v1.json").read_text(encoding="utf-8"))
@@ -93,6 +112,37 @@ class SourceBindingTests(unittest.TestCase):
                 "locator": {"kind": "file", "path": "README.md", "contentSha256": "f" * 64},
             }
             with self.assertRaisesRegex(ValueError, "differs from the bound catalog bytes"):
+                _validate_local_source_bytes(target, source, "test source")
+
+    def test_local_catalog_binding_rejects_non_ancestor_commit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "repo"
+            target.mkdir()
+            subprocess.run(["git", "init", "-q", "-b", "main"], cwd=target, check=True)
+            subprocess.run(["git", "config", "user.name", "Systemkatalog Test"], cwd=target, check=True)
+            subprocess.run(["git", "config", "user.email", "systemkatalog@example.invalid"], cwd=target, check=True)
+            (target / "README.md").write_text("main bytes\n", encoding="utf-8")
+            subprocess.run(["git", "add", "README.md"], cwd=target, check=True)
+            subprocess.run(["git", "commit", "-q", "-m", "main fixture"], cwd=target, check=True)
+            subprocess.run(["git", "switch", "-q", "-c", "side"], cwd=target, check=True)
+            raw = b"side bytes\n"
+            (target / "README.md").write_bytes(raw)
+            subprocess.run(["git", "add", "README.md"], cwd=target, check=True)
+            subprocess.run(["git", "commit", "-q", "-m", "side fixture"], cwd=target, check=True)
+            commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=target, text=True).strip()
+            subprocess.run(["git", "switch", "-q", "main"], cwd=target, check=True)
+            import hashlib
+            source = {
+                "repository": "heimgewebe/systemkatalog",
+                "commit": commit,
+                "defaultBranch": "main",
+                "locator": {
+                    "kind": "file",
+                    "path": "README.md",
+                    "contentSha256": hashlib.sha256(raw).hexdigest(),
+                },
+            }
+            with self.assertRaisesRegex(ValueError, "not an ancestor of HEAD"):
                 _validate_local_source_bytes(target, source, "test source")
 
     def test_json_pointer_must_identify_bound_system(self) -> None:
