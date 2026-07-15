@@ -6,10 +6,16 @@ TEMP_REPO="$(mktemp -d)"
 trap 'rm -rf -- "$TEMP_REPO"' EXIT
 
 git clone --no-hardlinks --quiet "$REAL_REPO" "$TEMP_REPO"
+# The nested mutation harness validates its own cloned Git graph. It must not
+# inherit a pull-request durability ref that exists only in the outer checkout.
+unset SYSTEMKATALOG_DURABLE_SOURCE_REF
 cd "$TEMP_REPO"
 git config user.name "Systemkatalog CI"
 git config user.email "systemkatalog-ci@example.invalid"
 BASE="$(git rev-parse HEAD)"
+# The temporary clone owns this ref. Point its default durability baseline at
+# the immutable snapshot under test instead of the outer repository base.
+git update-ref refs/remotes/origin/main "$BASE"
 reset_state() { git reset --hard "$BASE" >/dev/null; git clean -ffdx >/dev/null; }
 expect_failure() {
   local label="$1" expected="$2" out
