@@ -6,6 +6,9 @@ TEMP_REPO="$(mktemp -d)"
 trap 'rm -rf -- "$TEMP_REPO"' EXIT
 
 git clone --no-hardlinks --quiet "$REAL_REPO" "$TEMP_REPO"
+# The nested mutation harness validates its own cloned Git graph. It must not
+# inherit a pull-request durability ref that exists only in the outer checkout.
+unset SYSTEMKATALOG_DURABLE_SOURCE_REF
 cd "$TEMP_REPO"
 git config user.name "Systemkatalog CI"
 git config user.email "systemkatalog-ci@example.invalid"
