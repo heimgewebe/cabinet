@@ -34,10 +34,10 @@ class OrganizationScopeTests(unittest.TestCase):
 
     def test_all_active_organization_repositories_are_classified(self) -> None:
         scope = self._validate()
-        self.assertEqual(len(scope["repositories"]), 34)
+        self.assertEqual(len(scope["repositories"]), 35)
         self.assertEqual(
             sum(row["classification"] == "catalog" for row in scope["repositories"]),
-            32,
+            33,
         )
         self.assertEqual(
             {
@@ -92,7 +92,7 @@ class OrganizationScopeTests(unittest.TestCase):
             }
             for row in scope["repositories"]
         ]
-        self.assertEqual(validate_github_inventory(scope, inventory), 34)
+        self.assertEqual(validate_github_inventory(scope, inventory), 35)
 
     def test_public_github_drift_fails_closed(self) -> None:
         scope = load_scope(ROOT)
