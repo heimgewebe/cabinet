@@ -1,6 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
+import stat
 import sys
 import tempfile
 import unittest
@@ -237,6 +238,64 @@ class ApplyCatalogProposalTests(unittest.TestCase):
         self.assertEqual(
             system["source"]["commit"], "1111111111111111111111111111111111111111"
         )
+
+    def test_malformed_report_json_is_rejected(self):
+        report_path = self.workspace / "report.json"
+        review_path = self.workspace / "review.json"
+        report_bytes = b"{"
+        report_path.write_bytes(report_bytes)
+        report_sha = hashlib.sha256(report_bytes).hexdigest()
+        review = valid_review()
+        review["reportSha256"] = report_sha
+        review_bytes = json.dumps(review).encode("utf-8")
+        review_path.write_bytes(review_bytes)
+        review_sha = hashlib.sha256(review_bytes).hexdigest()
+
+        self.assertEqual(
+            apply_proposal(
+                self.workspace,
+                report_path,
+                review_path,
+                report_sha,
+                review_sha,
+                True,
+            ),
+            1,
+        )
+
+    def test_non_object_review_is_rejected(self):
+        report_path = self.workspace / "report.json"
+        review_path = self.workspace / "review.json"
+        report_bytes = json.dumps(valid_report()).encode("utf-8")
+        report_path.write_bytes(report_bytes)
+        report_sha = hashlib.sha256(report_bytes).hexdigest()
+        review_bytes = b"[]"
+        review_path.write_bytes(review_bytes)
+        review_sha = hashlib.sha256(review_bytes).hexdigest()
+
+        self.assertEqual(
+            apply_proposal(
+                self.workspace,
+                report_path,
+                review_path,
+                report_sha,
+                review_sha,
+                True,
+            ),
+            1,
+        )
+
+    def test_write_preserves_binding_mode(self):
+        bindings_path = self.workspace / "registry/ecosystem/source-bindings.v1.json"
+        bindings_path.chmod(0o640)
+        rep, rev, rep_sha, rev_sha = create_report_review(
+            self.workspace, valid_report(), valid_review()
+        )
+
+        self.assertEqual(
+            apply_proposal(self.workspace, rep, rev, rep_sha, rev_sha, True), 0
+        )
+        self.assertEqual(stat.S_IMODE(bindings_path.stat().st_mode), 0o640)
 
     def assert_rejected(self, report, review):
         rep, rev, rep_sha, rev_sha = create_report_review(

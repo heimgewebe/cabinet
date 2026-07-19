@@ -13,6 +13,7 @@ import sys
 import hashlib
 import re
 import os
+import stat
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -135,8 +136,16 @@ def apply_proposal(root: Path, report_path: Path, review_path: Path, expected_re
         print(f"Review hash mismatch. Expected: {expected_review_sha256}, Actual: {actual_review_sha256}")
         return 1
 
-    report = json.loads(report_bytes.decode("utf-8"))
-    review = json.loads(review_bytes.decode("utf-8"))
+    try:
+        report = json.loads(report_bytes.decode("utf-8"))
+        review = json.loads(review_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as e:
+        print(f"Failed to parse report or review JSON: {e}")
+        return 1
+
+    if not isinstance(report, dict) or not isinstance(review, dict):
+        print("Report and review must each be a JSON object")
+        return 1
 
     try:
         validate_report(report)
@@ -167,9 +176,15 @@ def apply_proposal(root: Path, report_path: Path, review_path: Path, expected_re
 
     bindings_path = root / "registry/ecosystem/source-bindings.v1.json"
     try:
-        bindings = json.loads(bindings_path.read_text(encoding="utf-8"))
-    except Exception as e:
+        bindings_bytes = bindings_path.read_bytes()
+        bindings = json.loads(bindings_bytes.decode("utf-8"))
+        bindings_mode = stat.S_IMODE(bindings_path.stat().st_mode)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as e:
         print(f"Failed to read bindings: {e}")
+        return 1
+
+    if not isinstance(bindings, dict) or not isinstance(bindings.get("systems"), list):
+        print("Bindings document must be a JSON object with a systems list")
         return 1
 
     systems_by_name = {b["system"]: b for b in bindings.get("systems", [])}
@@ -220,8 +235,11 @@ def apply_proposal(root: Path, report_path: Path, review_path: Path, expected_re
         fd, temp_path_str = tempfile.mkstemp(dir=bindings_path.parent, prefix="source-bindings.v1.", suffix=".json.tmp")
         temp_path = Path(temp_path_str)
         try:
-            with os.fdopen(fd, 'w', encoding="utf-8") as f:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
                 f.write(encoded)
+                f.flush()
+                os.fsync(f.fileno())
+            os.chmod(temp_path, bindings_mode)
             os.replace(temp_path, bindings_path)
         except Exception as e:
             if temp_path.exists():
