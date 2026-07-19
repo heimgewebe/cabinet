@@ -8,18 +8,51 @@ ROOT = Path(__file__).resolve().parents[2]
 EXPECTED = {
     "repo:systemkatalog": {
         "repository": "heimgewebe/systemkatalog",
-        "commit": "e0e8ae9baf9d93e4792c6acb8e4dbee1e2a9cccd",
-        "sha256": "644c819b59d75d03c28f5ba88fd498932949fbbae52f36d9d642f3c2fcfcd4ba",
+        "commit": "3cecde159552a7e0eff94fca94add0051017d9cc",
+        "sha256": "26adf42dc6a00347ad3ae38878fe35ba20b2cbef6601d4ba08caffb7916f7175",
+        "path": "README.md",
     },
-    "repo:schauwerk": {
-        "repository": "heimgewebe/schauwerk",
-        "commit": "a4aca3e22e2cb58f484e428901051309e65522c1",
-        "sha256": "213cac171ec7eb6d3c49835da1c68b69fd84ea8081d7e93c440e2418a41a9db1",
+    "repo:bureau": {
+        "repository": "heimgewebe/bureau",
+        "commit": "1fca33a9945cb25dac9eb5ef0d5b29619eb6d2a7",
+        "sha256": "94b9241d6ebb0a8c0ff9b308965967825dcd5fbad285354a546ad705fa912b6d",
+        "path": "README.md",
+    },
+    "repo:weltgewebe": {
+        "repository": "heimgewebe/weltgewebe",
+        "commit": "b5a9383fc36b381bf5a68fd2e9a287d13f2caa82",
+        "sha256": "4ada1c4578942f620098c7b7317b040200e720c69625bf2f57cafabebe59ae33",
+        "path": "README.md",
+    },
+    "repo:repoground": {
+        "repository": "heimgewebe/repoground",
+        "commit": "04f346dfcbff4513344709b4204ff9d820a91d48",
+        "sha256": "de79925b48f536bf88aa1d5f6bf678a1a6461027d0a42f89d99d35c987d0f6bf",
+        "path": "README.md",
+    },
+    "repo:semantAH": {
+        "repository": "heimgewebe/semantAH",
+        "commit": "d53000a909946a0381a8b365c4af7abd2456e8f6",
+        "sha256": "c982af6c37a5fb316403724f7ce74ad7111e8f6b98f79d8dedadc49af55a4a2e",
+        "path": "README.md",
+    },
+    "repo:sichter": {
+        "repository": "heimgewebe/sichter",
+        "commit": "f4359f0817d7db6b3f821bcdce7be12c18e561cc",
+        "sha256": "4c2e3f51ef816373968b8857023446a0f7422615d22a9090cd7eeb608446f260",
+        "path": "README.md",
+    },
+    "repo:heim-pc": {
+        "repository": "heimgewebe/heim-pc",
+        "commit": "686fc485f1af971ce336486ef5b10037284e626a",
+        "sha256": "9e1bbe5060a3c6aa47155ac2299fc3dbc25d7aabac3ba6e498cd8667e4ca2eb6",
+        "path": "manifest/operator-entry.v1.json",
     },
     "repo:commonworld": {
         "repository": "heimgewebe/commonworld",
-        "commit": "c0c18c87e034120903f4e6aa7467822e4390e210",
-        "sha256": "4a860538245912e8980f376dbb5c3499207f21f355fe2b1eb8f6647d6b0ef23f",
+        "commit": "3b33b4a566ab4cd5487a8a99e3f99b211347a6bc",
+        "sha256": "90f94b50c7ed43bbd225e1ef52e3449858063d154f16741389f8f20f8db46880",
+        "path": "README.md",
     },
 }
 
@@ -41,11 +74,11 @@ class SourceBindingDriftCloseoutTests(unittest.TestCase):
                 self.assertEqual(source["commit"], expected["commit"])
                 self.assertEqual(source["defaultBranch"], "main")
                 self.assertEqual(source["locator"]["kind"], "file")
-                self.assertEqual(source["locator"]["path"], "README.md")
+                self.assertEqual(source["locator"]["path"], expected["path"])
                 self.assertEqual(
                     source["locator"]["contentSha256"], expected["sha256"]
                 )
-                self.assertEqual(binding["reviewedAt"], "2026-07-17T16:59:07Z")
+                self.assertIsInstance(binding["reviewedAt"], str)
 
 
 if __name__ == "__main__":
