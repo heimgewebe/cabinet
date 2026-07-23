@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "kind": "system_catalog_component_admission_policy",
+  "owner": "repo:systemkatalog",
+  "role": "admission_gate_for_new_durable_components",
+  "inScopeNodeTypes": [
+    "repository",
+    "service",
+    "background_process",
+    "operator_surface"
+  ],
+  "admissionClasses": [
+    "replace",
+    "reduce",
+    "enable",
+    "experimental"
+  ],
+  "grandfatheredNodeIds": [
+    "repo:agent-control-surface",
+    "repo:aussensensor",
+    "repo:bureau",
+    "repo:chronik",
+    "repo:commonworld",
+    "repo:contracts-mirror",
+    "repo:device-graph",
+    "repo:grabowski",
+    "repo:hausKI",
+    "repo:hausKI-audio",
+    "repo:heim-pc",
+    "repo:heimgeist",
+    "repo:heimlern",
+    "repo:heimserver",
+    "repo:infra",
+    "repo:konvergenzregelkreis",
+    "repo:leitstand",
+    "repo:leitwerk",
+    "repo:metarepo",
+    "repo:mitschreiber",
+    "repo:obsidian-bridge",
+    "repo:plexer",
+    "repo:repoground",
+    "repo:schauwerk",
+    "repo:semantAH",
+    "repo:sichter",
+    "repo:snippet-engine-control",
+    "repo:steuerboard",
+    "repo:systemkatalog",
+    "repo:vault-gewebe",
+    "repo:vibe-lab",
+    "repo:weltgewebe",
+    "repo:wgx",
+    "service:ci",
+    "service:github"
+  ],
+  "requiredAdmissionFields": [
+    "componentId",
+    "componentKind",
+    "admissionClass",
+    "purpose",
+    "consumers",
+    "truthAuthority",
+    "operatingDependencies",
+    "maintenanceBurden",
+    "reviewOrRetirementPath",
+    "source",
+    "doesNotEstablish"
+  ],
+  "experimentalRequiredFields": [
+    "successCriterion",
+    "reviewBy"
+  ],
+  "authorityBoundary": {
+    "stableSemantics": "Systemkatalog",
+    "taskPriorityAndCloseout": "Bureau",
+    "runtimeAndExecution": "source systems and Grabowski",
+    "doesNotEstablish": [
+      "runtime status",
+      "task or queue truth",
+      "dispatch authority",
+      "merge authority",
+      "deployment authority",
+      "automatic retirement",
+      "global complexity score"
+    ]
+  },
+  "grandfatheredBaselineSha256": "ea4a400cba02b08f97252392c7ea5f169623767e43e13ce5ae98007dcb792254"
+}

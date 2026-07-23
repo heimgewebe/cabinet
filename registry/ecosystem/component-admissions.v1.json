@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "kind": "system_catalog_component_admissions",
+  "owner": "repo:systemkatalog",
+  "policy": "policy/component-admission.v1.json",
+  "admissions": [],
+  "doesNotEstablish": [
+    "runtime status",
+    "task or queue truth",
+    "dispatch authority",
+    "merge authority",
+    "deployment authority",
+    "automatic retirement"
+  ]
+}
