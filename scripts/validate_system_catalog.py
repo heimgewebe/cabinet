@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+from system_catalog_admissions import validate_component_admissions
 from system_catalog_fleet import COVERAGE_REL, validate_coverage
 from system_catalog_scope import SCOPE_REL, validate_scope
 from system_catalog_resilience import RESILIENCE_REL, validate_resilience
@@ -36,7 +37,7 @@ ARCHIVE_REL = Path("docs/archive/cabinet-era")
 NODE_FIELDS = {"id", "name", "type", "purpose", "notResponsibleFor", "truthOwnership", "entrypoints"}
 EDGE_FIELDS = {"from", "to", "type", "stability", "meaning"}
 CLAIM_FIELDS = {"id", "subject", "predicate", "object", "evidence", "does_not_establish"}
-ALLOWED_NODE_TYPES = {"human", "repository", "concept", "artifact", "service"}
+ALLOWED_NODE_TYPES = {"human", "repository", "concept", "artifact", "service", "background_process", "operator_surface"}
 AUTHORITY_OWNER_NODES = {
     "bureau": "repo:bureau",
     "grabowski": "repo:grabowski",
@@ -418,6 +419,7 @@ def validate(root: Path = ROOT) -> dict[str, Any]:
         raise ValueError("system inventory role mismatch")
     registry = load_registry(root)
     nodes = registry.nodes
+    component_admissions = validate_component_admissions(root, nodes)
     node_ids = [node["id"] for node in nodes]
     if "repo:systemkatalog" not in node_ids:
         raise ValueError("registry node identity mismatch")
@@ -543,6 +545,9 @@ def validate(root: Path = ROOT) -> dict[str, Any]:
         "sourceSystemBindings": len(source_bindings["systems"]),
         "sourceRelationBindings": len(source_bindings["relations"]),
         "freshnessRules": len(freshness_policy["rules"]),
+        "componentAdmissionInScope": component_admissions["inScopeComponents"],
+        "componentAdmissionGrandfathered": component_admissions["grandfatheredComponentsPresent"],
+        "componentAdmissionRecords": component_admissions["admittedComponents"],
         "activeLegacyRooms": 0,
         "archive": str(ARCHIVE_REL),
     }
